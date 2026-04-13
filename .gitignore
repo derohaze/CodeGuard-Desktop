@@ -7,7 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 .pytest_cache
-
+claude code
 
 node_modules
 dist
@@ -30,3 +30,4 @@ backend/**/*.pyc
 *.njsproj
 *.sln
 *.sw?
+backend/evals/repos/AltoroJ/.git.backup
