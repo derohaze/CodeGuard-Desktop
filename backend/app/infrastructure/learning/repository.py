@@ -377,8 +377,8 @@ class LearningArchiveMongoRepository:
                 {"_id": 1},
             )
         case_id = str(
-            case.get("case_id")
-            or (existing_case.get("_id") if existing_case else None)
+            (existing_case.get("_id") if existing_case else None)
+            or case.get("case_id")
             or bounded_identifier("bench_case", content_fingerprint or case)
         )
         now = utc_now()

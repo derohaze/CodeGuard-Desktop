@@ -38,6 +38,8 @@ def _resolve_parser(source_name: str):
         return _parse_semgrep_payload
     if source_name.startswith("codeql"):
         return _parse_codeql_payload
+    if source_name.startswith("cve") or source_name.startswith("nvd"):
+        return _parse_cve_payload
     if source_name.startswith("juliet"):
         return _parse_juliet_payload
     return _parse_generic_payload
@@ -238,6 +240,67 @@ def _parse_juliet_payload(payload_text: str, parsed_json: Any) -> ParsedExternal
             warnings=["juliet_specific_structure_not_found"],
         )
     return ParsedExternalPayload(items=rows, parser_name="juliet_parser")
+
+
+def _parse_cve_payload(payload_text: str, parsed_json: Any) -> ParsedExternalPayload:
+    rows: list[dict[str, Any]] = []
+    vulnerabilities: list[dict[str, Any]] = []
+    if isinstance(parsed_json, dict) and isinstance(parsed_json.get("vulnerabilities"), list):
+        vulnerabilities = [item for item in parsed_json["vulnerabilities"] if isinstance(item, dict)]
+    elif isinstance(parsed_json, list):
+        vulnerabilities = [item for item in parsed_json if isinstance(item, dict)]
+
+    for entry in vulnerabilities:
+        cve = entry.get("cve") if isinstance(entry.get("cve"), dict) else entry
+        if not isinstance(cve, dict):
+            continue
+        cve_id = str(cve.get("id") or cve.get("cveId") or "").strip().upper()
+        if not cve_id:
+            continue
+
+        descriptions = cve.get("descriptions") if isinstance(cve.get("descriptions"), list) else []
+        summary = None
+        for description_item in descriptions:
+            if isinstance(description_item, dict):
+                value = description_item.get("value")
+                if isinstance(value, str) and value.strip():
+                    summary = value.strip()
+                    break
+        title = f"{cve_id} vulnerability reference"
+
+        weakness_id = None
+        weaknesses = cve.get("weaknesses") if isinstance(cve.get("weaknesses"), list) else []
+        for weak in weaknesses:
+            if not isinstance(weak, dict):
+                continue
+            for item in weak.get("description", []):
+                if isinstance(item, dict):
+                    weakness_id = _normalize_cwe_id(item.get("value"))
+                    if weakness_id:
+                        break
+            if weakness_id:
+                break
+
+        rows.append(
+            {
+                "item_type": "security_pattern",
+                "title": title,
+                "summary": summary,
+                "weakness_id": weakness_id,
+                "vulnerability_category": _to_category_slug(weakness_id or cve_id),
+                "tags": _compact_tags(["cve", cve_id, weakness_id]),
+                "original_reference": f"https://nvd.nist.gov/vuln/detail/{cve_id}",
+            }
+        )
+
+    if not rows:
+        fallback = _parse_generic_payload(payload_text, parsed_json)
+        return ParsedExternalPayload(
+            items=fallback.items,
+            parser_name="generic_parser",
+            warnings=["cve_specific_structure_not_found"],
+        )
+    return ParsedExternalPayload(items=rows, parser_name="cve_parser")
 
 
 def _parse_generic_payload(payload_text: str, parsed_json: Any) -> ParsedExternalPayload:

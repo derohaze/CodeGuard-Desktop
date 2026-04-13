@@ -100,6 +100,7 @@ async def search_external_knowledge(
                 item_id=str(item.get("item_id") or item.get("_id")),
                 source_name=str(item.get("source_name", "")),
                 source_version=str(item.get("source_version", "")),
+                retrieval_score=float(item.get("retrieval_score")) if item.get("retrieval_score") is not None else None,
                 item_type=item.get("item_type"),
                 language=item.get("language"),
                 framework=item.get("framework"),
@@ -159,4 +160,3 @@ async def run_learning_benchmarks(
             for item in results
         ]
     )
-

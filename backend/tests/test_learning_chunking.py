@@ -7,6 +7,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.infrastructure.learning.chunking import (
+    MAX_MONGO_DOCUMENT_BYTES,
     ChunkPolicy,
     build_chunk_documents,
     chunk_text,
@@ -46,7 +47,19 @@ class LearningChunkingTests(unittest.TestCase):
         for document in docs:
             self.assertLessEqual(document["content_length"], 8192)
 
+    def test_large_payload_is_split_to_avoid_mongo_document_limit(self):
+        text = "Z" * (MAX_MONGO_DOCUMENT_BYTES + 1024)
+        docs, metadata = build_chunk_documents(
+            parent_item_id="item-large",
+            content=text,
+            content_type="prose",
+            policy=ChunkPolicy(chunk_size_chars=8192, prose_overlap_chars=256),
+        )
+        self.assertGreater(metadata["chunk_count"], 1)
+        for document in docs:
+            # Stored chunk payload remains well below Mongo's 16MB per-document cap.
+            self.assertLess(document["content_length"], MAX_MONGO_DOCUMENT_BYTES)
+
 
 if __name__ == "__main__":
     unittest.main()
-

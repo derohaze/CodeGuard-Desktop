@@ -14,6 +14,11 @@ from app.infrastructure.learning.external_parsers import (
     ParsedExternalPayload,
     parse_external_payload_with_parser,
 )
+from app.infrastructure.learning.fingerprints import text_checksum
+from app.infrastructure.learning.ingestion_validation import (
+    sanitize_external_item,
+    validate_external_source_spec,
+)
 from app.infrastructure.learning.normalization import normalize_external_item
 from app.infrastructure.learning.repository import LearningArchiveMongoRepository
 from app.infrastructure.learning.schemas import ExternalKnowledgeSourceSpec
@@ -42,11 +47,11 @@ class HttpExternalSourceFetcher:
         self._guard = asyncio.Lock()
         self._last_request_at = 0.0
 
-    async def fetch(self, endpoint: str) -> str:
+    async def fetch(self, endpoint: str, *, requests_per_second: int | None = None) -> str:
         async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
             for attempt in range(1, self.retry_attempts + 1):
                 try:
-                    await self._respect_rate_limit()
+                    await self._respect_rate_limit(requests_per_second=requests_per_second)
                     response = await client.get(endpoint)
                     response.raise_for_status()
                     return response.text
@@ -60,9 +65,10 @@ class HttpExternalSourceFetcher:
                     await asyncio.sleep(self._backoff_delay(attempt))
         raise RuntimeError("External ingestion failed after retries.")
 
-    async def _respect_rate_limit(self) -> None:
+    async def _respect_rate_limit(self, *, requests_per_second: int | None = None) -> None:
+        active_rps = max(1, int(requests_per_second or self.max_requests_per_second))
         async with self._guard:
-            minimum_interval = 1.0 / self.max_requests_per_second
+            minimum_interval = 1.0 / active_rps
             now = time.monotonic()
             elapsed = now - self._last_request_at
             if elapsed < minimum_interval:
@@ -93,8 +99,12 @@ class ExternalKnowledgeIngestionService:
         for source in sources:
             source_name = source.source_name.strip().lower()
             try:
+                validate_external_source_spec(source)
                 await self.repository.upsert_external_source(source.model_dump())
-                raw_text = await self.fetcher.fetch(source.endpoint)
+                raw_text = await self.fetcher.fetch(
+                    source.endpoint,
+                    requests_per_second=source.requests_per_second,
+                )
                 raw_cache_ref = await self.repository.cache_external_raw_payload(
                     ingestion_run_id=run_id,
                     source_name=source.source_name,
@@ -111,16 +121,17 @@ class ExternalKnowledgeIngestionService:
                 item_failed = 0
                 for index, raw_item in enumerate(raw_items):
                     try:
+                        sanitized = sanitize_external_item(raw_item)
                         normalized = normalize_external_item(
                             source=source,
-                            raw_item=raw_item,
+                            raw_item=sanitized.item,
                             ingestion_run_id=run_id,
                         )
                         item_id, inserted = await self.repository.upsert_external_item(
                             ingestion_run_id=run_id,
                             item=normalized.model_dump(),
-                            large_body=_build_external_large_body(raw_item),
-                            body_type=_detect_body_type(raw_item),
+                            large_body=_build_external_large_body(sanitized.item),
+                            body_type=_detect_body_type(sanitized.item),
                         )
                         logger.info(
                             "learning_ingestion_item_processed",
@@ -157,8 +168,10 @@ class ExternalKnowledgeIngestionService:
                         "source_version": source.source_version,
                         "fetched_items": len(raw_items),
                         "payload_bytes": len(raw_text.encode("utf-8")),
+                        "raw_payload_checksum": text_checksum(raw_text),
                         "parser_name": parsed_payload.parser_name,
                         "parser_warnings": parsed_payload.warnings,
+                        "rate_limit_rps": source.requests_per_second or getattr(self.fetcher, "max_requests_per_second", None),
                         "written_items": item_written,
                         "skipped_items": item_skipped,
                         "failed_items": item_failed,

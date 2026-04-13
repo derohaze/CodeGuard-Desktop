@@ -48,6 +48,16 @@ class LearningExternalParsersTests(unittest.TestCase):
         self.assertEqual(parsed.parser_name, "juliet_parser")
         self.assertEqual(parsed.items[0]["weakness_id"], "CWE-22")
 
+    def test_cve_parser_extracts_entries(self):
+        payload = (
+            '{"vulnerabilities":[{"cve":{"id":"CVE-2024-9999","descriptions":[{"lang":"en","value":"desc"}],'
+            '"weaknesses":[{"description":[{"lang":"en","value":"CWE-79"}]}]}}]}'
+        )
+        parsed = parse_external_payload_with_parser(payload, source_name="cve")
+        self.assertEqual(parsed.parser_name, "cve_parser")
+        self.assertEqual(parsed.items[0]["weakness_id"], "CWE-79")
+        self.assertIn("CVE-2024-9999", parsed.items[0]["title"])
+
     def test_unknown_source_uses_generic_parser(self):
         payload = '{"items":[{"title":"Generic item","summary":"desc"}]}'
         parsed = parse_external_payload_with_parser(payload, source_name="unknown")

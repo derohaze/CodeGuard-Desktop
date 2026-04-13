@@ -176,6 +176,7 @@ class ExternalKnowledgeSourceSpec(BaseModel):
     source_version: str
     endpoint: str
     item_type: str
+    requests_per_second: int | None = None
     language: str | None = None
     framework: str | None = None
     vulnerability_category: str | None = None
@@ -195,4 +196,3 @@ class ExternalKnowledgeSearchQuery(BaseModel):
     tags: list[str] = Field(default_factory=list)
     limit: int = 20
     offset: int = 0
-

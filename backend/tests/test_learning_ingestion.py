@@ -17,7 +17,7 @@ class StaticFetcher:
         self.payload = payload
         self.calls = 0
 
-    async def fetch(self, endpoint: str) -> str:
+    async def fetch(self, endpoint: str, **kwargs) -> str:
         self.calls += 1
         return self.payload
 

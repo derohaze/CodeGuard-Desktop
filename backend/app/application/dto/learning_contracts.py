@@ -19,6 +19,7 @@ class ExternalKnowledgeSourceRequest(BaseModel):
     source_version: str
     endpoint: str
     item_type: str
+    requests_per_second: int | None = None
     language: str | None = None
     framework: str | None = None
     vulnerability_category: str | None = None
@@ -45,6 +46,7 @@ class ExternalKnowledgeItemResponse(BaseModel):
     item_id: str
     source_name: str
     source_version: str
+    retrieval_score: float | None = None
     item_type: str | None = None
     language: str | None = None
     framework: str | None = None
@@ -95,4 +97,3 @@ class BenchmarkRunResult(BaseModel):
 
 class BenchmarkRunResponse(BaseModel):
     results: list[BenchmarkRunResult]
-

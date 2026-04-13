@@ -26,7 +26,28 @@ class FakeLearningRepository:
         offset: int,
     ) -> list[dict]:
         if query_text == "sql":
-            return [{"item_id": "item-1", "title": "SQL Injection"}]
+            return [
+                {
+                    "item_id": "item-1",
+                    "title": "SQL Injection",
+                    "summary": "SQL injection vulnerability",
+                    "tags": ["injection", "database"],
+                    "retrieval_text": "sql injection cwe-89",
+                    "language": "python",
+                    "framework": "fastapi",
+                    "vulnerability_category": "sql_injection",
+                    "source_name": "cwe",
+                    "weakness_id": "CWE-89",
+                },
+                {
+                    "item_id": "item-2",
+                    "title": "General Security",
+                    "summary": "generic guidance",
+                    "tags": ["misc"],
+                    "retrieval_text": "general security",
+                    "language": "python",
+                },
+            ]
         return []
 
 
@@ -39,15 +60,16 @@ class LearningSearchUseCaseTests(unittest.TestCase):
                     query="sql",
                     language="python",
                     framework="fastapi",
-                    limit=10,
+                    limit=1,
                     offset=0,
                 )
             )
         )
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0]["item_id"], "item-1")
+        self.assertIn("retrieval_score", response[0])
+        self.assertGreater(response[0]["retrieval_score"], 0)
 
 
 if __name__ == "__main__":
     unittest.main()
-
