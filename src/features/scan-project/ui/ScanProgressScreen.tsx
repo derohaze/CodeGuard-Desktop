@@ -231,7 +231,7 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
               <div className="space-y-2.5">
                 {visibleStageLines.map((line, index) => (
                   <div
-                    key={`${line}-${index}`}
+                    key={`stage-line-${index}`}
                     className="flex items-start gap-3 text-sm text-txt-secondary"
                   >
                     {index === visibleStageLines.length - 1 ? (
