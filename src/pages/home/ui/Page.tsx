@@ -35,6 +35,7 @@ import { TeamSecurityPostureScreen } from "@/features/team-security-posture";
 import { VerificationScreen } from "@/features/verification";
 import type { Finding, PatchExportSnapshot, RemediationPlan } from "@/entities/finding/model/types";
 import type { Session } from "@/entities/session/model/types";
+import { mergeSessionOrder } from "@/entities/session/lib/session-order";
 import {
   applyFix,
   deleteAllScanSessions,
@@ -213,10 +214,7 @@ export default function Page() {
 
   const syncSessionOrder = useCallback((nextSessions: Session[]) => {
     setSessionOrder((current) => {
-      const nextIds = nextSessions.map((session) => session.id);
-      const retained = current.filter((id) => nextIds.includes(id));
-      const appended = nextIds.filter((id) => !retained.includes(id));
-      return [...retained, ...appended];
+      return mergeSessionOrder(current, nextSessions);
     });
   }, []);
 
