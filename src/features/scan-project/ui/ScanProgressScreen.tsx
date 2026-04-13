@@ -145,11 +145,11 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
     >
       <div className="mx-auto flex w-full max-w-[860px] flex-col items-center">
         <h2 className="text-center text-[30px] font-semibold tracking-[-0.03em] text-txt-primary">
-          Analyzing your codebase
+          Security analysis in progress
         </h2>
 
         <p className="mt-3 max-w-[560px] text-center text-[15px] leading-7 text-txt-secondary">
-          Reviewing data flow, trust boundaries, and high-risk patterns across your repository.
+          Inspecting repository structure, data flow, and active review signals.
         </p>
 
         <div className="mt-10 w-full">
@@ -162,7 +162,9 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
               <ProgressBarValue />
             </ProgressBarHeader>
             <ProgressBarTrack className="bg-[#ece3d6] [--progress-content-bg:hsl(var(--primary))]" />
-            <Description>{animatedCurrentLine}</Description>
+            <Description className="h-6 overflow-hidden text-ellipsis whitespace-nowrap">
+              {animatedCurrentLine}
+            </Description>
           </ProgressBar>
         </div>
 
@@ -190,7 +192,7 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
         )}
 
         {session && (
-          <div className="mt-4 grid w-full gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-4 grid w-full gap-3 md:auto-rows-[132px] md:grid-cols-2 xl:grid-cols-4">
             <ProgressInfoCard
               label="Mode and phase"
               value={`${session.session.scanMode === "deep" ? "Deep analysis" : "Fast analysis"} - ${session.session.currentPhase}`}
@@ -280,10 +282,10 @@ function ProgressInfoCard({
   note: string;
 }) {
   return (
-    <div className="rounded-lg border bg-card px-4 py-4" style={{ borderColor: "hsl(var(--border-soft))" }}>
-      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-txt-tertiary">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-txt-primary">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-txt-secondary">{note}</p>
+    <div className="flex h-[132px] flex-col overflow-hidden rounded-lg border bg-card px-4 py-4" style={{ borderColor: "hsl(var(--border-soft))" }}>
+      <p className="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-txt-tertiary">{label}</p>
+      <p className="mt-2 truncate text-sm font-semibold text-txt-primary" title={value}>{value}</p>
+      <p className="mt-1 h-10 overflow-hidden text-xs leading-5 text-txt-secondary" title={note}>{note}</p>
     </div>
   );
 }
@@ -564,8 +566,8 @@ function buildCoverageDisplay(
   const reviewHasStarted = metrics.reviewedBlocksCount > 0 || phase === "Reviewing paths" || phase === "Validation" || phase === "Scoring" || phase === "Completed";
   if (!reviewHasStarted) {
     return {
-      value: "Coverage starts during review",
-      note: `${phaseSnapshot.note} Review coverage will begin once prioritized blocks enter active review.`,
+      value: "Coverage pending",
+      note: "Coverage metrics will appear once prioritized files enter active review.",
     };
   }
 
@@ -618,7 +620,7 @@ function buildPhaseSnapshot(
   if (session.session.currentPhase === "Repository mapping") {
     return {
       value: `${numberValue(counters.mapping_artifacts_ready || counters.mapping_units_completed)}/${numberValue(counters.mapping_artifacts_total || counters.mapping_units_total)} artifacts ready`,
-      note: "Trust boundaries, framework markers, sinks, and graph summaries are being assembled.",
+      note: "Repository structure, dependency markers, and review metadata are being prepared.",
     };
   }
   if (session.session.currentPhase === "Segmentation") {
@@ -630,25 +632,25 @@ function buildPhaseSnapshot(
   if (session.session.currentPhase === "Path tracing") {
     return {
       value: `${numberValue(counters.paths_prepared)}/${numberValue(counters.paths_total)} paths prepared`,
-      note: `${numberValue(counters.review_items_prepared)}/${numberValue(counters.review_items_total)} review items are ready for scoring.`,
+      note: `${numberValue(counters.review_items_prepared)}/${numberValue(counters.review_items_total)} review items are queued for analysis.`,
     };
   }
   if (session.session.currentPhase === "Reviewing paths") {
     return {
       value: `${numberValue(counters.review_batches_completed)}/${numberValue(counters.review_batches_total)} batches completed`,
-      note: "Deep review is moving through the prioritized exploit paths.",
+      note: "Active review is progressing through prioritized code paths.",
     };
   }
   if (session.session.currentPhase === "Validation") {
     return {
       value: `${numberValue(counters.candidates_validated)}/${numberValue(counters.candidates_total)} candidates validated`,
-      note: "Speculative paths are being rejected and defensible findings retained.",
+      note: "Candidate findings are being confirmed before reporting.",
     };
   }
   if (session.session.currentPhase === "Scoring") {
     return {
       value: `${numberValue(counters.artifacts_finalized)}/${numberValue(counters.artifacts_total)} score artifacts ready`,
-      note: "Coverage, annotations, and verdict evidence are being finalized.",
+      note: "Coverage and evidence summaries are being finalized.",
     };
   }
   return {

@@ -1,11 +1,11 @@
 export const taskLines = [
   { text: "Tracing attacker-controlled input through webhook delivery", type: "done" as const },
-  { text: "Finagling...", type: "status" as const },
+  { text: "Reviewing execution context...", type: "status" as const },
   { text: "Validating where shell execution crosses trust boundaries", type: "done" as const },
-  { text: "Thinking...", type: "status" as const },
+  { text: "Evaluating control flow...", type: "status" as const },
   { text: "Comparing safer subprocess invocation patterns", type: "done" as const },
   { text: "Now I'll implement the fix", type: "done" as const },
-  { text: "Noodling...", type: "status" as const },
+  { text: "Preparing the next update...", type: "status" as const },
   { text: "Preparing patch summary and commit-ready output", type: "done" as const },
 ];
 
