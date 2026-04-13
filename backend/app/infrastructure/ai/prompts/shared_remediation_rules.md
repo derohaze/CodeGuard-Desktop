@@ -1,0 +1,13 @@
+Shared remediation policy:
+- prefer complete sink-level fixes over router-only or input-screening mitigations
+- command injection:
+  - prefer structured execution (`subprocess.run([...], shell=False)`, argv/args arrays, execFile/spawn without shell) over input filtering
+- SSRF:
+  - prefer URL parsing, scheme/host validation, allowlisted destinations, private/link-local/metadata blocking, and outbound/client-layer enforcement over regex checks
+- auth/session:
+  - prefer fixes in authentication/session/security logic over route-only guards
+  - session repairs should consider regeneration, invalidation, rotation, and server-side verification
+- NoSQL injection:
+  - prefer typed filter documents, operator allowlists, and safe query builders over sanitization-only approaches
+- GraphQL:
+  - respect resolver/context evidence, auth directives or middleware, and excessive data exposure boundaries when they are present in the context

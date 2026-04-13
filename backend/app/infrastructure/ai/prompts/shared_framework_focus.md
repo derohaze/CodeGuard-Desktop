@@ -1,0 +1,11 @@
+Framework-specific focus:
+- GraphQL:
+  - trace schema/query/mutation/resolver/context relationships when present
+  - treat args, variables, and resolver input objects as untrusted sources
+  - pay attention to auth directives, middleware, depth/cost guards, raw SQL/raw query APIs, file import paths, and command helpers
+- Java servlet / non-Spring Java:
+  - treat HttpServletRequest, HttpSession, doGet/doPost, @WebServlet, JSP includes/forwards, and JDBC Statement execution as high-signal markers
+  - distinguish router/view-layer guards from fixes that move into service, DAO, repository, or auth/session logic
+- Multi-service:
+  - use service address edges, grpc/http clients, and service graph links conservatively
+  - identify useful boundary transitions, not distributed perfection

@@ -1,0 +1,658 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { Description, Label } from "@/components/ui/field";
+import {
+  ProgressBar,
+  ProgressBarHeader,
+  ProgressBarTrack,
+  ProgressBarValue,
+} from "@/components/ui/progress-bar";
+import { ShinyText } from "@/components/ui/shiny-text";
+import type { ScanSessionDetail } from "@/shared/api/security";
+import { toAnalystCopy } from "@/shared/lib/analyst-copy";
+import { Loader } from "@/shared/ui/Loader";
+
+interface ScanProgressScreenProps {
+  session: ScanSessionDetail | null;
+}
+
+export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
+  const isFailed = session?.session.status === "failed";
+  const isActive = session?.session.status === "queued" || session?.session.status === "scanning";
+  const currentLine = toAnalystCopy(session?.session.progressMessage ?? "Waiting for analysis updates...");
+  const [revealedLineCount, setRevealedLineCount] = useState(0);
+  const [activeLineCharCount, setActiveLineCharCount] = useState(0);
+  const [showLogTopFade, setShowLogTopFade] = useState(false);
+  const [showLogBottomFade, setShowLogBottomFade] = useState(false);
+  const lastSessionIdRef = useRef<string | null>(null);
+  const logContainerRef = useRef<HTMLDivElement | null>(null);
+  const stickToBottomRef = useRef(true);
+  const liveCandidateCount = Number(session?.session.reviewQueueSummary?.current_candidate_findings_count ?? session?.session.candidateFindingsCount ?? 0);
+  const liveValidatedCount = Number(session?.session.reviewQueueSummary?.current_validated_findings_count ?? session?.session.findingsCount ?? 0);
+  const progressCounters = session?.session.progressCounters as Record<string, number | string> | null | undefined;
+  const animatedMetrics = useAnimatedMetrics(session, progressCounters, liveCandidateCount, liveValidatedCount);
+  const liveElapsedSeconds = useLiveElapsedSeconds(session?.session.elapsedSeconds ?? 0, Boolean(isActive), session?.session.id ?? null);
+  const animatedCurrentLine = useTypedText(currentLine, 14);
+  const phaseSnapshot = useMemo(() => buildPhaseSnapshot(session, animatedMetrics), [animatedMetrics, session]);
+  const coverageDisplay = useMemo(() => buildCoverageDisplay(session, phaseSnapshot, animatedMetrics), [animatedMetrics, phaseSnapshot, session]);
+  const pathDisplay = useMemo(() => buildPathDisplay(session, animatedMetrics), [animatedMetrics, session]);
+
+  useEffect(() => {
+    const nextSessionId = session?.session.id ?? null;
+    if (lastSessionIdRef.current === nextSessionId) return;
+
+    lastSessionIdRef.current = nextSessionId;
+    setRevealedLineCount(0);
+    setActiveLineCharCount(0);
+    stickToBottomRef.current = true;
+  }, [session?.session.id]);
+
+  const stageLines = useMemo(() => {
+    if (!session) {
+      return ["Waiting for analysis to start..."];
+    }
+
+    return buildLiveStageLines(session.session.progressLogs, currentLine);
+  }, [currentLine, session]);
+
+  useEffect(() => {
+    if (stageLines.length === 0) return;
+
+    if (revealedLineCount > stageLines.length - 1) {
+      setRevealedLineCount(Math.max(stageLines.length - 1, 0));
+      setActiveLineCharCount(0);
+      return;
+    }
+
+    const activeLine = stageLines[revealedLineCount] ?? "";
+    if (!activeLine) return;
+
+    if (activeLineCharCount > activeLine.length) {
+      setActiveLineCharCount(activeLine.length);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      if (activeLineCharCount < activeLine.length) {
+        setActiveLineCharCount((current) => Math.min(current + 2, activeLine.length));
+        return;
+      }
+
+      if (revealedLineCount < stageLines.length - 1) {
+        setRevealedLineCount((current) => current + 1);
+        setActiveLineCharCount(0);
+      }
+    }, activeLineCharCount < activeLine.length ? 18 : 140);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeLineCharCount, revealedLineCount, stageLines]);
+
+  const visibleStageLines = useMemo(() => {
+    if (stageLines.length === 0) {
+      return [];
+    }
+
+    return stageLines
+      .map((line, index) => {
+        if (index < revealedLineCount) {
+          return line;
+        }
+
+        if (index === revealedLineCount) {
+          return line.slice(0, Math.max(activeLineCharCount, 1));
+        }
+
+        return "";
+      })
+      .filter(Boolean);
+  }, [activeLineCharCount, revealedLineCount, stageLines]);
+
+  useEffect(() => {
+    const container = logContainerRef.current;
+    if (!container) return;
+    if (!stickToBottomRef.current) return;
+    container.scrollTop = container.scrollHeight;
+  }, [activeLineCharCount, revealedLineCount, visibleStageLines.length]);
+
+  useEffect(() => {
+    const container = logContainerRef.current;
+    if (!container) return;
+
+    const updateLogFades = () => {
+      const maxScrollTop = Math.max(container.scrollHeight - container.clientHeight, 0);
+      stickToBottomRef.current = maxScrollTop - container.scrollTop <= 32;
+      setShowLogTopFade(container.scrollTop > 4);
+      setShowLogBottomFade(maxScrollTop - container.scrollTop > 4);
+    };
+
+    updateLogFades();
+    container.addEventListener("scroll", updateLogFades);
+    window.addEventListener("resize", updateLogFades);
+
+    return () => {
+      container.removeEventListener("scroll", updateLogFades);
+      window.removeEventListener("resize", updateLogFades);
+    };
+  }, [visibleStageLines.length, activeLineCharCount, revealedLineCount]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.16, ease: "linear" }}
+      className="hide-scrollbar dotted-bg flex min-h-0 flex-1 items-start justify-center overflow-y-auto bg-surface px-6 py-12 pb-20"
+    >
+      <div className="mx-auto flex w-full max-w-[860px] flex-col items-center">
+        <h2 className="text-center text-[30px] font-semibold tracking-[-0.03em] text-txt-primary">
+          Analyzing your codebase
+        </h2>
+
+        <p className="mt-3 max-w-[560px] text-center text-[15px] leading-7 text-txt-secondary">
+          Reviewing data flow, trust boundaries, and high-risk patterns across your repository.
+        </p>
+
+        <div className="mt-10 w-full">
+          <ProgressBar value={animatedMetrics.actualProgress}>
+            <ProgressBarHeader>
+              <Label className="inline-flex items-center gap-2">
+                {!isFailed && isActive && <Loader variant="spin" className="size-3.5 text-txt-primary" />}
+                {isFailed ? "Security analysis failed" : "Security analysis in progress"}
+              </Label>
+              <ProgressBarValue />
+            </ProgressBarHeader>
+            <ProgressBarTrack className="bg-[#ece3d6] [--progress-content-bg:hsl(var(--primary))]" />
+            <Description>{animatedCurrentLine}</Description>
+          </ProgressBar>
+        </div>
+
+        {session && (
+          <div className="mt-3 w-full rounded-lg border bg-card px-4 py-4" style={{ borderColor: "hsl(var(--border-soft))" }}>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-txt-tertiary">
+                Current Phase Progress
+              </p>
+              <p className="text-xs text-txt-secondary">
+                {animatedMetrics.phaseProgress}% of {session.session.currentPhase.toLowerCase()}
+              </p>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-md bg-[#ece3d6]">
+              <motion.div
+                className="h-full rounded-md bg-[#b98a45]"
+                animate={{ width: `${animatedMetrics.phaseProgress}%` }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+              />
+            </div>
+            <p className="mt-3 text-xs leading-5 text-txt-secondary">
+              {describePhaseCounters(session.session.currentPhase, animatedMetrics)}
+            </p>
+          </div>
+        )}
+
+        {session && (
+          <div className="mt-4 grid w-full gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <ProgressInfoCard
+              label="Mode and phase"
+              value={`${session.session.scanMode === "deep" ? "Deep analysis" : "Fast analysis"} - ${session.session.currentPhase}`}
+              note={`Elapsed ${formatElapsedSeconds(liveElapsedSeconds)}`}
+            />
+            <ProgressInfoCard
+              label="Coverage progress"
+              value={coverageDisplay.value}
+              note={coverageDisplay.note}
+            />
+            <ProgressInfoCard
+              label="Path review"
+              value={pathDisplay.value}
+              note={[pathDisplay.note, `${animatedMetrics.candidateFindingsCount} candidates, ${animatedMetrics.validatedFindingsCount} validated`].filter(Boolean).join(" ")}
+            />
+            <ProgressInfoCard
+              label="Live inventory"
+              value={phaseSnapshot.value}
+              note={phaseSnapshot.note}
+            />
+          </div>
+        )}
+
+        <div
+          className="mt-6 w-full overflow-hidden rounded-[22px] border bg-card"
+          style={{ borderColor: "hsl(var(--border-soft))" }}
+        >
+          <div className="relative">
+            {showLogTopFade && (
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-7 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,255,255,0))]" />
+            )}
+            {showLogBottomFade && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-8 bg-[linear-gradient(0deg,rgba(255,255,255,0.98),rgba(255,255,255,0))]" />
+            )}
+            <div ref={logContainerRef} className="hide-scrollbar max-h-[360px] min-h-[220px] overflow-y-auto px-5 py-5">
+              <div className="space-y-2.5">
+                {visibleStageLines.map((line, index) => (
+                  <div
+                    key={`${line}-${index}`}
+                    className="flex items-start gap-3 text-sm text-txt-secondary"
+                  >
+                    {index === visibleStageLines.length - 1 ? (
+                      <Loader variant="spin" className="mt-[6px] size-3 shrink-0 text-[#b9ab95]" />
+                    ) : (
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#b9ab95]" />
+                    )}
+                    {index === visibleStageLines.length - 1 ? (
+                      <ShinyText
+                        text={line}
+                        speed={2}
+                        delay={0.1}
+                        spread={30}
+                        color="#222222"
+                        shineColor="#ffffff"
+                        direction="left"
+                        yoyo={false}
+                        pauseOnHover
+                        className="min-w-0 break-words leading-7 text-txt-primary"
+                      />
+                    ) : (
+                      <span className="min-w-0 break-words leading-7">{line}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {isFailed && session?.errorMessage && (
+          <div className="mt-5 w-full rounded-lg border border-status-critical/20 bg-[#fff8f6] px-5 py-4 text-sm text-status-critical">
+            {toAnalystCopy(session.errorMessage)}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function ProgressInfoCard({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string;
+  note: string;
+}) {
+  return (
+    <div className="rounded-lg border bg-card px-4 py-4" style={{ borderColor: "hsl(var(--border-soft))" }}>
+      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-txt-tertiary">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-txt-primary">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-txt-secondary">{note}</p>
+    </div>
+  );
+}
+
+function formatElapsedSeconds(value: number) {
+  const totalSeconds = Math.max(0, value);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const parts = [
+    days > 0 ? `${days}d` : null,
+    days > 0 || hours > 0 ? `${hours}h` : null,
+    days > 0 || hours > 0 || minutes > 0 ? `${minutes}m` : null,
+    `${seconds}s`,
+  ].filter(Boolean);
+
+  return parts.join(" ");
+}
+
+function useLiveElapsedSeconds(baseElapsedSeconds: number, active: boolean, sessionId: string | null) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(baseElapsedSeconds);
+
+  useEffect(() => {
+    setElapsedSeconds(baseElapsedSeconds);
+  }, [baseElapsedSeconds, sessionId]);
+
+  useEffect(() => {
+    if (!active) return;
+    const timer = window.setInterval(() => {
+      setElapsedSeconds((current) => current + 1);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [active, sessionId]);
+
+  return elapsedSeconds;
+}
+
+function useTypedText(value: string, chunkSize = 2) {
+  const [typedValue, setTypedValue] = useState(value);
+  const [targetValue, setTargetValue] = useState(value);
+
+  useEffect(() => {
+    setTargetValue(value);
+    setTypedValue((current) => (value.startsWith(current) ? current : ""));
+  }, [value]);
+
+  useEffect(() => {
+    if (typedValue === targetValue) return;
+    const timer = window.setTimeout(() => {
+      setTypedValue(targetValue.slice(0, Math.min(typedValue.length + chunkSize, targetValue.length)));
+    }, 16);
+    return () => window.clearTimeout(timer);
+  }, [chunkSize, targetValue, typedValue]);
+
+  return typedValue;
+}
+
+type AnimatedMetrics = ReturnType<typeof buildAnimatedMetricTargets>;
+
+function useAnimatedMetrics(
+  session: ScanSessionDetail | null,
+  counters: Record<string, number | string> | null | undefined,
+  liveCandidateCount: number,
+  liveValidatedCount: number,
+) {
+  const targets = useMemo(
+    () => buildAnimatedMetricTargets(session, counters, liveCandidateCount, liveValidatedCount),
+    [counters, liveCandidateCount, liveValidatedCount, session],
+  );
+  const [metrics, setMetrics] = useState<AnimatedMetrics>(targets);
+  const metricsRef = useRef(metrics);
+
+  useEffect(() => {
+    metricsRef.current = metrics;
+  }, [metrics]);
+
+  useEffect(() => {
+    const start = performance.now();
+    const duration = 420;
+    let frame = 0;
+
+    const from = metricsRef.current;
+    const to = targets;
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = Object.fromEntries(
+        Object.keys(to).map((key) => {
+          const fromValue = from[key as keyof AnimatedMetrics] ?? 0;
+          const toValue = to[key as keyof AnimatedMetrics] ?? 0;
+          return [key, fromValue + (toValue - fromValue) * eased];
+        }),
+      ) as AnimatedMetrics;
+      setMetrics(next);
+      if (progress < 1) {
+        frame = window.requestAnimationFrame(tick);
+      }
+    };
+
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [targets]);
+
+  return useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(metrics).map(([key, value]) => [key, Math.max(0, Math.round(Number(value) || 0))]),
+      ) as AnimatedMetrics,
+    [metrics],
+  );
+}
+
+function buildAnimatedMetricTargets(
+  session: ScanSessionDetail | null,
+  counters: Record<string, number | string> | null | undefined,
+  liveCandidateCount: number,
+  liveValidatedCount: number,
+) {
+  return {
+    actualProgress: numberValue(session?.session.progress),
+    phaseProgress: numberValue(session?.session.phaseProgress),
+    coveragePercent: numberValue(session?.session.coveragePercent),
+    reviewedFilesCount: numberValue(session?.session.reviewedFilesCount),
+    eligibleFilesCount: numberValue(session?.session.eligibleFilesCount),
+    reviewedBlocksCount: numberValue(session?.session.reviewedBlocksCount),
+    totalBlocksCount: numberValue(session?.session.totalBlocksCount),
+    totalPathsCount: numberValue(session?.session.totalPathsCount),
+    tracedPathsCount: numberValue(session?.session.tracedPathsCount),
+    candidateFindingsCount: numberValue(liveCandidateCount),
+    validatedFindingsCount: numberValue(liveValidatedCount),
+    files_indexed: numberValue(counters?.files_indexed),
+    files_total: numberValue(counters?.files_total),
+    mapping_artifacts_ready: numberValue(counters?.mapping_artifacts_ready || counters?.mapping_units_completed),
+    mapping_artifacts_total: numberValue(counters?.mapping_artifacts_total || counters?.mapping_units_total),
+    mapping_ai_steps_completed: numberValue(counters?.mapping_ai_steps_completed),
+    mapping_ai_steps_total: numberValue(counters?.mapping_ai_steps_total),
+    files_segmented: numberValue(counters?.files_segmented),
+    files_to_segment: numberValue(counters?.files_to_segment),
+    paths_prepared: numberValue(counters?.paths_prepared),
+    paths_total: numberValue(counters?.paths_total),
+    review_items_prepared: numberValue(counters?.review_items_prepared),
+    review_items_total: numberValue(counters?.review_items_total),
+    blocks_reviewed: numberValue(counters?.blocks_reviewed),
+    blocks_total: numberValue(counters?.blocks_total),
+    review_batches_completed: numberValue(counters?.review_batches_completed),
+    review_batches_total: numberValue(counters?.review_batches_total),
+    candidates_validated: numberValue(counters?.candidates_validated),
+    candidates_total: numberValue(counters?.candidates_total),
+    validation_artifacts_ready: numberValue(counters?.validation_artifacts_ready),
+    validation_artifacts_total: numberValue(counters?.validation_artifacts_total),
+    artifacts_finalized: numberValue(counters?.artifacts_finalized),
+    artifacts_total: numberValue(counters?.artifacts_total),
+  };
+}
+
+function buildLiveStageLines(progressLogs: string[], currentLine: string) {
+  const normalizedCurrentLine = normalizeStageLine(currentLine);
+  const nextLines: string[] = [];
+  const signatures: string[] = [];
+
+  progressLogs
+    .filter(Boolean)
+    .map((entry) => toAnalystCopy(entry))
+    .forEach((line) => {
+      const normalizedLine = normalizeStageLine(line);
+      if (!normalizedLine) return;
+      if (normalizedLine === normalizedCurrentLine) return;
+      if (signatures.some((signature) => areStageLinesTooSimilar(signature, normalizedLine))) {
+        return;
+      }
+      signatures.push(normalizedLine);
+      nextLines.push(line.trim());
+    });
+
+  if (normalizedCurrentLine) {
+    const duplicateIndex = signatures.findIndex((signature) =>
+      areStageLinesTooSimilar(signature, normalizedCurrentLine),
+    );
+    if (duplicateIndex >= 0) {
+      nextLines.splice(duplicateIndex, 1);
+      signatures.splice(duplicateIndex, 1);
+    }
+    nextLines.push(currentLine.trim());
+  }
+
+  return nextLines.length > 0 ? nextLines : ["Analysis is preparing the next live update..."];
+}
+
+function normalizeStageLine(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .trim();
+}
+
+function areStageLinesTooSimilar(left: string, right: string) {
+  if (!left || !right) return false;
+  if (left === right) return true;
+
+  const leftTokens = left.split(" ").filter(Boolean);
+  const rightTokens = right.split(" ").filter(Boolean);
+  const leftSet = new Set(leftTokens);
+  const rightSet = new Set(rightTokens);
+  let overlap = 0;
+
+  leftSet.forEach((token) => {
+    if (rightSet.has(token)) {
+      overlap += 1;
+    }
+  });
+
+  const union = new Set([...leftSet, ...rightSet]).size;
+  if (union === 0) return false;
+
+  const similarity = overlap / union;
+  return similarity >= 0.82;
+}
+
+function describePhaseCounters(
+  phase: string,
+  counters: Record<string, number | string> | null | undefined,
+) {
+  if (!counters) {
+    return "Waiting for live work-unit counters.";
+  }
+
+  if (phase === "Discovery") {
+    return `${numberValue(counters.files_indexed)}/${numberValue(counters.files_total)} files indexed`;
+  }
+  if (phase === "Repository mapping") {
+    const artifactReady = numberValue(counters.mapping_artifacts_ready || counters.mapping_units_completed);
+    const artifactTotal = numberValue(counters.mapping_artifacts_total || counters.mapping_units_total);
+    const aiReady = numberValue(counters.mapping_ai_steps_completed);
+    const aiTotal = numberValue(counters.mapping_ai_steps_total);
+    if (aiTotal > 0) {
+      return `${artifactReady}/${artifactTotal} mapping artifacts ready, ${aiReady}/${aiTotal} AI boundary summaries completed`;
+    }
+    return `${artifactReady}/${artifactTotal} mapping artifacts ready`;
+  }
+  if (phase === "Segmentation") {
+    return `${numberValue(counters.files_segmented)}/${numberValue(counters.files_to_segment)} files segmented`;
+  }
+  if (phase === "Path tracing") {
+    return `${numberValue(counters.paths_prepared)}/${numberValue(counters.paths_total)} paths prepared, ${numberValue(counters.review_items_prepared)}/${numberValue(counters.review_items_total)} review items queued`;
+  }
+  if (phase === "Reviewing paths") {
+    return `${numberValue(counters.blocks_reviewed)}/${numberValue(counters.blocks_total)} blocks reviewed, ${numberValue(counters.review_batches_completed)}/${numberValue(counters.review_batches_total)} batches completed`;
+  }
+  if (phase === "Validation") {
+    return `${numberValue(counters.candidates_validated)}/${numberValue(counters.candidates_total)} candidate findings validated, ${numberValue(counters.validation_artifacts_ready)}/${numberValue(counters.validation_artifacts_total)} validation artifacts ready`;
+  }
+  if (phase === "Scoring") {
+    return `${numberValue(counters.artifacts_finalized)}/${numberValue(counters.artifacts_total)} scoring artifacts finalized`;
+  }
+  return "Awaiting the next work-unit update.";
+}
+
+function numberValue(value: number | string | undefined) {
+  return Number(value ?? 0);
+}
+
+function buildCoverageDisplay(
+  session: ScanSessionDetail | null,
+  phaseSnapshot: { value: string; note: string },
+  metrics: AnimatedMetrics,
+) {
+  if (!session) {
+    return {
+      value: "Waiting for coverage",
+      note: "Coverage counters begin after repository review starts.",
+    };
+  }
+
+  const phase = session.session.currentPhase;
+  const reviewHasStarted = metrics.reviewedBlocksCount > 0 || phase === "Reviewing paths" || phase === "Validation" || phase === "Scoring" || phase === "Completed";
+  if (!reviewHasStarted) {
+    return {
+      value: "Coverage starts during review",
+      note: `${phaseSnapshot.note} Review coverage will begin once prioritized blocks enter active review.`,
+    };
+  }
+
+  return {
+    value: `${metrics.coveragePercent}% coverage`,
+    note: `${metrics.reviewedFilesCount}/${metrics.eligibleFilesCount || metrics.reviewedFilesCount} files, ${metrics.reviewedBlocksCount}/${metrics.totalBlocksCount || metrics.reviewedBlocksCount} blocks`,
+  };
+}
+
+function buildPathDisplay(session: ScanSessionDetail | null, metrics: AnimatedMetrics) {
+  if (!session) {
+    return {
+      value: "Waiting for path inventory",
+      note: "",
+    };
+  }
+
+  const pathSummary = (session.session.pathSummary ?? {}) as Record<string, unknown>;
+  const candidatePaths = Number(pathSummary.candidate_path_count ?? metrics.totalPathsCount ?? 0);
+  const reviewedPaths = Number(metrics.tracedPathsCount ?? 0);
+  if (reviewedPaths <= 0 && candidatePaths > 0) {
+    return {
+      value: `${candidatePaths} candidate paths`,
+      note: "Inventory prepared.",
+    };
+  }
+  return {
+    value: `${reviewedPaths}/${metrics.totalPathsCount || reviewedPaths} paths`,
+    note: "",
+  };
+}
+
+function buildPhaseSnapshot(
+  session: ScanSessionDetail | null,
+  counters: Record<string, number | string> | null | undefined,
+) {
+  if (!session || !counters) {
+    return {
+      value: "Awaiting work units",
+      note: "Live analysis counters will appear as soon as discovery starts.",
+    };
+  }
+
+  if (session.session.currentPhase === "Discovery") {
+    return {
+      value: `${numberValue(counters.files_indexed)}/${numberValue(counters.files_total)} files indexed`,
+      note: "Repository discovery is building the file inventory.",
+    };
+  }
+  if (session.session.currentPhase === "Repository mapping") {
+    return {
+      value: `${numberValue(counters.mapping_artifacts_ready || counters.mapping_units_completed)}/${numberValue(counters.mapping_artifacts_total || counters.mapping_units_total)} artifacts ready`,
+      note: "Trust boundaries, framework markers, sinks, and graph summaries are being assembled.",
+    };
+  }
+  if (session.session.currentPhase === "Segmentation") {
+    return {
+      value: `${numberValue(counters.files_segmented)}/${numberValue(counters.files_to_segment)} files segmented`,
+      note: "The review queue is being narrowed to code blocks and high-risk path units.",
+    };
+  }
+  if (session.session.currentPhase === "Path tracing") {
+    return {
+      value: `${numberValue(counters.paths_prepared)}/${numberValue(counters.paths_total)} paths prepared`,
+      note: `${numberValue(counters.review_items_prepared)}/${numberValue(counters.review_items_total)} review items are ready for scoring.`,
+    };
+  }
+  if (session.session.currentPhase === "Reviewing paths") {
+    return {
+      value: `${numberValue(counters.review_batches_completed)}/${numberValue(counters.review_batches_total)} batches completed`,
+      note: "Deep review is moving through the prioritized exploit paths.",
+    };
+  }
+  if (session.session.currentPhase === "Validation") {
+    return {
+      value: `${numberValue(counters.candidates_validated)}/${numberValue(counters.candidates_total)} candidates validated`,
+      note: "Speculative paths are being rejected and defensible findings retained.",
+    };
+  }
+  if (session.session.currentPhase === "Scoring") {
+    return {
+      value: `${numberValue(counters.artifacts_finalized)}/${numberValue(counters.artifacts_total)} score artifacts ready`,
+      note: "Coverage, annotations, and verdict evidence are being finalized.",
+    };
+  }
+  return {
+    value: session.session.currentPhase,
+    note: "Awaiting the next live work-unit update.",
+  };
+}

@@ -1,0 +1,18 @@
+.shiny-text {
+  position: relative;
+  display: inline-block;
+}
+
+.shiny-text-base {
+  color: inherit;
+}
+
+.shiny-text-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
