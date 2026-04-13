@@ -2,16 +2,21 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 
 let mainWindow;
+const INITIAL_WINDOW_WIDTH = 1120;
+const INITIAL_WINDOW_HEIGHT = 720;
+const MIN_WINDOW_WIDTH = 980;
+const MIN_WINDOW_HEIGHT = 640;
 
 app.setName('CodeGuard');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 1180,
-    minHeight: 760,
+    width: INITIAL_WINDOW_WIDTH,
+    height: INITIAL_WINDOW_HEIGHT,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     center: true,
+    show: false,
     backgroundColor: '#f8f4ee',
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
@@ -43,6 +48,18 @@ function createWindow() {
   }
 
   mainWindow.setTitle('CodeGuard');
+  mainWindow.once('ready-to-show', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    }
+    if (mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(false);
+    }
+    mainWindow.setSize(INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
+    mainWindow.center();
+    mainWindow.show();
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
