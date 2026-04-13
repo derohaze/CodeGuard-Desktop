@@ -1,17 +1,32 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.error_handlers import register_error_handlers
 from app.core.logging import configure_logging
-from app.infrastructure.database.mongo_manager import ensure_mongo_indexes
+from app.infrastructure.database.mongo import close_mongo, initialize_mongo
+from app.infrastructure.database.mongo_manager import ensure_backend_bootstrap
+from app.infrastructure.queue.redis import close_redis, initialize_redis
 from app.presentation.api.v1.routes import health, remediation, scans, sessions
 
 
 settings = get_settings()
 configure_logging()
 
-app = FastAPI(title=settings.app_name)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await initialize_mongo()
+    await initialize_redis()
+    await ensure_backend_bootstrap()
+    yield
+    await close_redis()
+    await close_mongo()
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,8 +41,3 @@ app.include_router(scans.router, prefix="/api/v1", tags=["scans"])
 app.include_router(sessions.router, prefix="/api/v1", tags=["sessions"])
 app.include_router(remediation.router, prefix="/api/v1", tags=["remediation"])
 register_error_handlers(app)
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    await ensure_mongo_indexes()

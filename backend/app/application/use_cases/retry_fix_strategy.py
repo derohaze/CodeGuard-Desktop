@@ -7,12 +7,19 @@ from app.domain.repositories.scan_repository import ScanSessionRepository
 from app.infrastructure.ai.orchestration.remediation_router import RemediationRouter
 from app.infrastructure.services.decision_summary import append_approval_history, build_finding_decision_summary
 from app.infrastructure.services.remediation_context import build_batch_remediation_context, build_remediation_context, locate_finding
+from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
 
 
 class RetryFixStrategyUseCase:
-    def __init__(self, repository: ScanSessionRepository, router: RemediationRouter) -> None:
+    def __init__(
+        self,
+        repository: ScanSessionRepository,
+        router: RemediationRouter,
+        workflow_persistence: WorkflowPersistenceService | None = None,
+    ) -> None:
         self.repository = repository
         self.router = router
+        self.workflow_persistence = workflow_persistence
 
     async def execute(self, payload: RetryFixStrategyRequest) -> RemediationPlanResponse | None:
         session = await self.repository.get_by_id(payload.session_id)
@@ -75,4 +82,16 @@ class RetryFixStrategyUseCase:
                 "updated_at": utc_now(),
             },
         )
+        if self.workflow_persistence is not None:
+            await self.workflow_persistence.record_audit(
+                session_id=session.id,
+                entity_type="finding",
+                entity_id=finding.id,
+                action="remediation.plan_retried",
+                payload={
+                    "excluded_strategy_ids": retry_state.excluded_strategy_ids,
+                    "attempted_strategy_ids": finding.attempted_strategy_ids,
+                    "recommended_strategy_id": entity.recommended_strategy_id,
+                },
+            )
         return map_remediation_plan(entity)

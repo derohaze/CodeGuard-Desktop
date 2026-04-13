@@ -4,12 +4,15 @@ from bson import ObjectId
 
 from app.domain.entities.scan import FindingEntity, ScanSessionEntity
 from app.domain.repositories.scan_repository import ScanSessionRepository
+from app.infrastructure.database.collections import FINDINGS_COLLECTION, SCAN_SESSIONS_COLLECTION
 from app.infrastructure.database.mongo import get_database
 
 
 class MongoScanSessionRepository(ScanSessionRepository):
     def __init__(self) -> None:
-        self.collection = get_database()["scan_sessions"]
+        database = get_database()
+        self.collection = database[SCAN_SESSIONS_COLLECTION]
+        self.findings_collection = database[FINDINGS_COLLECTION]
 
     async def list_recent_light(self, limit: int = 25) -> list[ScanSessionEntity]:
         cursor = (
@@ -29,6 +32,7 @@ class MongoScanSessionRepository(ScanSessionRepository):
         payload = _entity_to_document(session)
         payload["_id"] = ObjectId(session.id)
         await self.collection.insert_one(payload)
+        await self._sync_findings(session)
         return session
 
     async def update(self, session_id: str, updates: dict) -> ScanSessionEntity | None:
@@ -38,7 +42,10 @@ class MongoScanSessionRepository(ScanSessionRepository):
         if "candidate_findings" in normalized:
             normalized["candidate_findings"] = [_finding_to_document(item) for item in normalized["candidate_findings"]]
         await self.collection.update_one({"_id": ObjectId(session_id)}, {"$set": normalized})
-        return await self.get_by_id(session_id)
+        updated = await self.get_by_id(session_id)
+        if updated is not None and ("findings" in normalized or "candidate_findings" in normalized):
+            await self._sync_findings(updated)
+        return updated
 
     async def get_by_id(self, session_id: str) -> ScanSessionEntity | None:
         document = await self.collection.find_one({"_id": ObjectId(session_id)})
@@ -52,11 +59,38 @@ class MongoScanSessionRepository(ScanSessionRepository):
 
     async def delete(self, session_id: str) -> bool:
         result = await self.collection.delete_one({"_id": ObjectId(session_id)})
+        await self.findings_collection.delete_many({"session_id": session_id})
         return result.deleted_count > 0
 
     async def delete_all(self) -> int:
         result = await self.collection.delete_many({})
+        await self.findings_collection.delete_many({})
         return int(result.deleted_count)
+
+    async def _sync_findings(self, session: ScanSessionEntity) -> None:
+        documents = [
+            _finding_record_to_document(
+                session_id=session.id,
+                scan_job_id=(session.latest_scan_job or {}).get("id"),
+                finding=item,
+                finding_kind="validated",
+                repo=session.repo,
+            )
+            for item in session.findings
+        ]
+        documents.extend(
+            _finding_record_to_document(
+                session_id=session.id,
+                scan_job_id=(session.latest_scan_job or {}).get("id"),
+                finding=item,
+                finding_kind="candidate",
+                repo=session.repo,
+            )
+            for item in session.candidate_findings
+        )
+        await self.findings_collection.delete_many({"session_id": session.id})
+        if documents:
+            await self.findings_collection.insert_many(documents, ordered=False)
 
 
 def _finding_to_document(finding: FindingEntity) -> dict:
@@ -90,8 +124,30 @@ def _finding_to_document(finding: FindingEntity) -> dict:
     }
 
 
+def _finding_record_to_document(*, session_id: str, scan_job_id: str | None, finding: FindingEntity, finding_kind: str, repo: str) -> dict:
+    return {
+        "session_id": session_id,
+        "scan_job_id": scan_job_id,
+        "finding_id": finding.id,
+        "finding_kind": finding_kind,
+        "severity": finding.severity,
+        "file_path": finding.file,
+        "line_start": finding.line,
+        "line_end": finding.line_end,
+        "title": finding.title,
+        "description": finding.summary,
+        "status": finding.remediation_status,
+        "fingerprint": finding.id,
+        "category": finding.category,
+        "confidence": finding.confidence,
+        "repo": repo,
+        "payload": _finding_to_document(finding),
+    }
+
+
 def _entity_to_document(session: ScanSessionEntity) -> dict:
     return {
+        "session_id": session.id,
         "title": session.title,
         "repo": session.repo,
         "source_path": session.source_path,
@@ -142,6 +198,7 @@ def _entity_to_document(session: ScanSessionEntity) -> dict:
         "candidate_findings": [_finding_to_document(item) for item in session.candidate_findings],
         "remediation_checkpoints": session.remediation_checkpoints,
         "last_verification": session.last_verification,
+        "latest_scan_job": session.latest_scan_job,
         "workflow_summary": session.workflow_summary,
         "workflow_events": session.workflow_events,
         "error_message": session.error_message,
@@ -265,6 +322,7 @@ def _document_to_entity(document: dict) -> ScanSessionEntity:
         candidate_findings=candidate_findings,
         remediation_checkpoints=document.get("remediation_checkpoints", []),
         last_verification=document.get("last_verification"),
+        latest_scan_job=document.get("latest_scan_job"),
         workflow_summary=document.get("workflow_summary"),
         workflow_events=document.get("workflow_events", []),
         error_message=document.get("error_message"),

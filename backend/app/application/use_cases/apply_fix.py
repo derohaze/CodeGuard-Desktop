@@ -22,11 +22,13 @@ from app.infrastructure.services.runtime_safety_policy import (
     build_write_scope_note,
     ensure_safe_patch_target,
 )
+from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
 
 
 class ApplyFixUseCase:
-    def __init__(self, repository: ScanSessionRepository) -> None:
+    def __init__(self, repository: ScanSessionRepository, workflow_persistence: WorkflowPersistenceService | None = None) -> None:
         self.repository = repository
+        self.workflow_persistence = workflow_persistence
 
     async def execute(self, payload: ApplyFixRequest) -> RemediationExecutionResponse | None:
         session = await self.repository.get_by_id(payload.session_id)
@@ -165,6 +167,32 @@ class ApplyFixUseCase:
                 "updated_at": utc_now(),
             },
         ) or session
+        if self.workflow_persistence is not None:
+            await self.workflow_persistence.record_verification(
+                session_id=session.id,
+                finding_id=finding.id,
+                fix_id=payload.strategy_id or finding.id,
+                status=verification["status"],
+                checks=verification_notes,
+                payload={
+                    "file": payload.file,
+                    "manual_edit": payload.manual_edit,
+                    "checkpoint_id": checkpoint["id"],
+                    "approval_gate_outcome": gate_outcome,
+                },
+            )
+            await self.workflow_persistence.record_audit(
+                session_id=session.id,
+                entity_type="finding",
+                entity_id=finding.id,
+                action="remediation.applied",
+                payload={
+                    "strategy_id": payload.strategy_id,
+                    "file": payload.file,
+                    "verification_status": verification["status"],
+                    "approval_gate_outcome": gate_outcome,
+                },
+            )
         action = PatchApplicationEntity(
             finding_id=finding.id,
             status="applied",

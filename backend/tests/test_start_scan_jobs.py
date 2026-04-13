@@ -1,0 +1,61 @@
+import asyncio
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from app.application.dto.scan_contracts import StartScanRequest
+from app.application.use_cases.start_scan import StartScanUseCase
+
+
+class FakeSessionRepository:
+    def __init__(self) -> None:
+        self.created = None
+
+    async def create(self, session):
+        self.created = session
+        return session
+
+
+class FakeJobRepository:
+    def __init__(self) -> None:
+        self.created = None
+
+    async def create(self, job):
+        self.created = job
+        return job
+
+
+class StartScanJobTests(unittest.TestCase):
+    def test_start_scan_creates_session_and_queued_job_snapshot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "main.py").write_text("print('hello')\n", encoding="utf-8")
+            session_repo = FakeSessionRepository()
+            job_repo = FakeJobRepository()
+            use_case = StartScanUseCase(session_repo, job_repo)
+
+            session, job = asyncio.run(
+                use_case.execute(
+                    StartScanRequest(
+                        source_path=str(root),
+                        target_type="folder",
+                        preset="balanced",
+                        scan_mode="deep",
+                    )
+                )
+            )
+
+        self.assertEqual(session.id, job.session_id)
+        self.assertEqual(job.status, "queued")
+        self.assertIsNotNone(session.latest_scan_job)
+        self.assertEqual(session.latest_scan_job["id"], job.id)
+        self.assertEqual(session.latest_scan_job["status"], "queued")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -8,21 +8,82 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.database.mongo_manager import ensure_mongo_indexes
+from app.infrastructure.database.mongo_manager import ensure_backend_bootstrap, ensure_mongo_indexes
 
 
 class MongoManagerTests(unittest.TestCase):
     def test_ensure_indexes_creates_expected_scan_session_indexes(self):
-        collection = MagicMock()
-        collection.create_index = AsyncMock()
-        database = {"scan_sessions": collection}
+        scan_sessions = MagicMock()
+        scan_sessions.create_index = AsyncMock()
+        scan_jobs = MagicMock()
+        scan_jobs.create_index = AsyncMock()
+        findings = MagicMock()
+        findings.create_index = AsyncMock()
+        findings.update_many = AsyncMock()
+        findings.index_information = AsyncMock(return_value={"ux_findings_finding_id": {}})
+        findings.drop_index = AsyncMock()
+        fix_suggestions = MagicMock()
+        fix_suggestions.create_index = AsyncMock()
+        verification_runs = MagicMock()
+        verification_runs.create_index = AsyncMock()
+        audit_events = MagicMock()
+        audit_events.create_index = AsyncMock()
+        report_exports = MagicMock()
+        report_exports.create_index = AsyncMock()
+        database = {
+            "scan_sessions": scan_sessions,
+            "scan_jobs": scan_jobs,
+            "findings": findings,
+            "fix_suggestions": fix_suggestions,
+            "verification_runs": verification_runs,
+            "audit_events": audit_events,
+            "report_exports": report_exports,
+        }
         with patch("app.infrastructure.database.mongo_manager.get_database", return_value=database):
             asyncio.run(ensure_mongo_indexes())
 
-        created_names = [call.kwargs.get("name") for call in collection.create_index.call_args_list]
+        created_names = [call.kwargs.get("name") for call in scan_sessions.create_index.call_args_list]
         self.assertIn("idx_scan_sessions_updated_at_desc", created_names)
         self.assertIn("idx_scan_sessions_status_updated_at_desc", created_names)
         self.assertIn("idx_scan_sessions_repo_updated_at_desc", created_names)
+        self.assertIn("ux_scan_sessions_session_id", created_names)
+
+        scan_job_index_names = [call.kwargs.get("name") for call in scan_jobs.create_index.call_args_list]
+        self.assertIn("ux_scan_jobs_job_id", scan_job_index_names)
+        self.assertIn("idx_scan_jobs_session_created_at_desc", scan_job_index_names)
+        self.assertIn("idx_scan_jobs_status_created_at_desc", scan_job_index_names)
+        finding_index_names = [call.kwargs.get("name") for call in findings.create_index.call_args_list]
+        self.assertIn("ux_findings_session_kind_finding_id", finding_index_names)
+
+    def test_backend_bootstrap_creates_missing_collections(self):
+        database = MagicMock()
+        database.list_collection_names = AsyncMock(return_value=["scan_sessions"])
+        database.create_collection = AsyncMock()
+        collections = {}
+        for name in (
+            "scan_sessions",
+            "scan_jobs",
+            "findings",
+            "fix_suggestions",
+            "verification_runs",
+            "audit_events",
+            "report_exports",
+        ):
+            collection = MagicMock()
+            collection.create_index = AsyncMock()
+            collection.update_many = AsyncMock()
+            collection.index_information = AsyncMock(return_value={})
+            collection.drop_index = AsyncMock()
+            collections[name] = collection
+        database.__getitem__.side_effect = collections.__getitem__
+        with patch("app.infrastructure.database.mongo_manager.get_database", return_value=database), patch(
+            "app.infrastructure.database.mongo_manager.ensure_artifacts_directory"
+        ):
+            asyncio.run(ensure_backend_bootstrap())
+
+        created = [call.args[0] for call in database.create_collection.call_args_list]
+        self.assertIn("scan_jobs", created)
+        self.assertIn("audit_events", created)
 
 
 if __name__ == "__main__":

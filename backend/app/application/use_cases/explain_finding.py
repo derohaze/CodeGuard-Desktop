@@ -4,12 +4,19 @@ from app.domain.entities.remediation import ExplanationEntity
 from app.domain.repositories.scan_repository import ScanSessionRepository
 from app.infrastructure.ai.orchestration.remediation_router import RemediationRouter
 from app.infrastructure.services.remediation_context import build_remediation_context, locate_finding
+from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
 
 
 class ExplainFindingUseCase:
-    def __init__(self, repository: ScanSessionRepository, agent_router: RemediationRouter) -> None:
+    def __init__(
+        self,
+        repository: ScanSessionRepository,
+        agent_router: RemediationRouter,
+        workflow_persistence: WorkflowPersistenceService | None = None,
+    ) -> None:
         self.repository = repository
         self.agent_router = agent_router
+        self.workflow_persistence = workflow_persistence
 
     async def execute(self, payload: ExplainFindingRequest) -> ExplanationResponse | None:
         session = await self.repository.get_by_id(payload.session_id)
@@ -39,4 +46,16 @@ class ExplainFindingUseCase:
             sink=str(explanation.get("sink") or f"{finding.file}:{finding.line}"),
             impact=str(explanation.get("impact") or finding.impact),
         )
+        if self.workflow_persistence is not None:
+            await self.workflow_persistence.record_audit(
+                session_id=session.id,
+                entity_type="finding",
+                entity_id=finding.id,
+                action="remediation.explained",
+                payload={
+                    "file": finding.file,
+                    "category": finding.category,
+                    "summary": entity.summary,
+                },
+            )
         return map_explanation(entity)

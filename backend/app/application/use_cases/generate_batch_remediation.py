@@ -7,12 +7,19 @@ from app.domain.repositories.scan_repository import ScanSessionRepository
 from app.infrastructure.ai.orchestration.remediation_router import RemediationRouter
 from app.infrastructure.services.decision_summary import append_approval_history, build_finding_decision_summary
 from app.infrastructure.services.remediation_context import build_batch_remediation_context, build_remediation_context
+from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
 
 
 class GenerateBatchRemediationUseCase:
-    def __init__(self, repository: ScanSessionRepository, agent_router: RemediationRouter) -> None:
+    def __init__(
+        self,
+        repository: ScanSessionRepository,
+        agent_router: RemediationRouter,
+        workflow_persistence: WorkflowPersistenceService | None = None,
+    ) -> None:
         self.repository = repository
         self.agent_router = agent_router
+        self.workflow_persistence = workflow_persistence
 
     async def execute(self, payload: GenerateBatchRemediationRequest) -> RemediationPlanResponse | None:
         session = await self.repository.get_by_id(payload.session_id)
@@ -68,6 +75,18 @@ class GenerateBatchRemediationUseCase:
                 "updated_at": utc_now(),
             },
         )
+        if self.workflow_persistence is not None:
+            await self.workflow_persistence.record_audit(
+                session_id=session.id,
+                entity_type="session",
+                entity_id=session.id,
+                action="remediation.batch_plan_generated",
+                payload={
+                    "finding_ids": entity.finding_ids,
+                    "recommended_strategy_id": entity.recommended_strategy_id,
+                    "strategy_count": len(entity.strategies),
+                },
+            )
         return map_remediation_plan(entity)
 
 

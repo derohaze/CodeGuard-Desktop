@@ -27,13 +27,20 @@ from app.infrastructure.services.remediation_tuning import (
     evaluate_tuning_need,
     extract_failure_case,
 )
+from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
 
 
 class GenerateFixUseCase:
-    def __init__(self, repository: ScanSessionRepository, agent_router: RemediationRouter) -> None:
+    def __init__(
+        self,
+        repository: ScanSessionRepository,
+        agent_router: RemediationRouter,
+        workflow_persistence: WorkflowPersistenceService | None = None,
+    ) -> None:
         self.repository = repository
         self.agent_router = agent_router
         self.feedback_store = RemediationFeedbackStore()
+        self.workflow_persistence = workflow_persistence
 
     async def execute(self, payload: GenerateFixRequest) -> RemediationPlanResponse | None:
         session = await self.repository.get_by_id(payload.session_id)
@@ -63,6 +70,18 @@ class GenerateFixUseCase:
                 "updated_at": utc_now(),
             },
         )
+        if self.workflow_persistence is not None:
+            await self.workflow_persistence.record_audit(
+                session_id=session.id,
+                entity_type="finding",
+                entity_id=finding.id,
+                action="remediation.plan_generated",
+                payload={
+                    "recommended_strategy_id": entity.recommended_strategy_id,
+                    "strategy_count": len(entity.strategies),
+                    "review_summary": entity.review_summary,
+                },
+            )
         return map_remediation_plan(entity)
 
     async def _generate_with_tuning(self, *, context: dict, finding_id: str, mode: str) -> RemediationPlanEntity:

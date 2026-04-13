@@ -28,6 +28,19 @@ class Settings(BaseSettings):
 
     mongodb_uri: str = Field(alias="MONGODB_URI")
     mongodb_database: str = Field(default="CodeGuard", alias="MONGODB_DATABASE")
+    mongodb_max_pool_size: int = Field(default=30, alias="MONGODB_MAX_POOL_SIZE")
+    mongodb_min_pool_size: int = Field(default=5, alias="MONGODB_MIN_POOL_SIZE")
+    mongodb_server_selection_timeout_ms: int = Field(default=3000, alias="MONGODB_SERVER_SELECTION_TIMEOUT_MS")
+    queue_backend: str = Field(default="in_process", alias="QUEUE_BACKEND")
+    auto_start_queue_worker: bool = Field(default=True, alias="AUTO_START_QUEUE_WORKER")
+    redis_url: str | None = Field(default=None, alias="REDIS_URL")
+    scan_queue_name: str = Field(default="codeguard:queue:scan", alias="SCAN_QUEUE_NAME")
+    scan_job_timeout_seconds: int = Field(default=1800, alias="SCAN_JOB_TIMEOUT_SECONDS")
+    worker_concurrency: int = Field(default=4, alias="WORKER_CONCURRENCY")
+    artifacts_dir: str = Field(
+        default=str(Path(__file__).resolve().parents[2] / "artifacts"),
+        alias="ARTIFACTS_DIR",
+    )
 
     @field_validator("app_cors_origins", mode="before")
     @classmethod
@@ -42,6 +55,14 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
+
+    @field_validator("queue_backend", mode="before")
+    @classmethod
+    def normalize_queue_backend(cls, value: str):
+        normalized = str(value).strip().lower()
+        if normalized not in {"in_process", "arq"}:
+            raise ValueError("QUEUE_BACKEND must be either 'in_process' or 'arq'.")
+        return normalized
 
 
 @lru_cache

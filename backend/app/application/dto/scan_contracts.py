@@ -77,6 +77,20 @@ class SeveritySummary(BaseModel):
     low: int = 0
 
 
+class ScanJobResponse(BaseModel):
+    id: str
+    session_id: str
+    type: Literal["scan"]
+    status: Literal["queued", "running", "completed", "failed", "cancelled"]
+    stage: str
+    progress: int
+    attempts: int
+    error_message: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
 class SessionSummaryResponse(BaseModel):
     id: str
     title: str
@@ -131,6 +145,7 @@ class SessionSummaryResponse(BaseModel):
     source_path: str
     preset: Literal["safe", "balanced", "aggressive"]
     last_verification: dict | None = None
+    latest_scan_job: ScanJobResponse | None = None
     workflow_summary: dict | None = None
     created_at: datetime
     updated_at: datetime

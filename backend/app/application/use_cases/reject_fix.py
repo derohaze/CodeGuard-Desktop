@@ -5,11 +5,13 @@ from app.domain.entities.scan import utc_now
 from app.domain.repositories.scan_repository import ScanSessionRepository
 from app.infrastructure.services.decision_summary import append_approval_history, determine_apply_gate
 from app.infrastructure.services.remediation_context import locate_finding
+from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
 
 
 class RejectFixUseCase:
-    def __init__(self, repository: ScanSessionRepository) -> None:
+    def __init__(self, repository: ScanSessionRepository, workflow_persistence: WorkflowPersistenceService | None = None) -> None:
         self.repository = repository
+        self.workflow_persistence = workflow_persistence
 
     async def execute(self, payload: RejectFixRequest) -> RemediationExecutionResponse | None:
         session = await self.repository.get_by_id(payload.session_id)
@@ -36,6 +38,17 @@ class RejectFixUseCase:
                 "updated_at": utc_now(),
             },
         ) or session
+        if self.workflow_persistence is not None:
+            await self.workflow_persistence.record_audit(
+                session_id=session.id,
+                entity_type="finding",
+                entity_id=finding.id,
+                action="remediation.rejected",
+                payload={
+                    "strategy_id": payload.strategy_id,
+                    "status": finding.remediation_status,
+                },
+            )
 
         action = PatchApplicationEntity(
             finding_id=finding.id,

@@ -4,13 +4,16 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
-from app.application.dto.scan_contracts import ScanSessionDetailResponse, StartScanRequest
+from app.application.dto.scan_contracts import ScanJobResponse, ScanSessionDetailResponse, StartScanRequest
+from app.application.ports.scan_job_dispatcher import ScanJobDispatcher
 from app.application.use_cases.scan_mapper import map_session_detail
+from app.application.use_cases.get_scan_job import GetScanJobUseCase
 from app.application.use_cases.get_session import GetSessionUseCase
 from app.application.use_cases.start_scan import StartScanUseCase
 from app.core.exceptions import InvalidSourcePathError
 from app.presentation.api.v1.routes.dependencies import (
-    get_scan_execution_service,
+    get_scan_job_dispatcher,
+    get_scan_job_use_case,
     get_session_use_case,
     get_start_scan_use_case,
 )
@@ -23,13 +26,14 @@ router = APIRouter()
 async def start_scan(
     payload: StartScanRequest,
     start_scan_use_case: StartScanUseCase = Depends(get_start_scan_use_case),
+    scan_job_dispatcher: ScanJobDispatcher = Depends(get_scan_job_dispatcher),
 ):
     try:
-        created = await start_scan_use_case.execute(payload)
+        created_session, created_job = await start_scan_use_case.execute(payload)
     except InvalidSourcePathError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    await get_scan_execution_service().submit(created.id)
-    return map_session_detail(created)
+    await scan_job_dispatcher.enqueue_scan(created_session.id, created_job.id)
+    return map_session_detail(created_session)
 
 
 @router.get("/scans/{session_id}", response_model=ScanSessionDetailResponse)
@@ -38,6 +42,26 @@ async def get_scan(session_id: str, use_case: GetSessionUseCase = Depends(get_se
     if detail is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan session not found.")
     return detail
+
+
+@router.get("/scan-jobs/{job_id}", response_model=ScanJobResponse)
+async def get_scan_job(job_id: str, use_case: GetScanJobUseCase = Depends(get_scan_job_use_case)):
+    job = await use_case.execute(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan job not found.")
+    return ScanJobResponse(
+        id=job.id,
+        session_id=job.session_id,
+        type=job.job_type,
+        status=job.status,
+        stage=job.stage,
+        progress=job.progress,
+        attempts=job.attempts,
+        error_message=job.error_message,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+    )
 
 
 @router.get("/scans/{session_id}/events")

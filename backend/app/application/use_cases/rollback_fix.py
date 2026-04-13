@@ -12,11 +12,13 @@ from app.infrastructure.services.runtime_safety_policy import (
     build_write_scope_note,
     ensure_safe_patch_target,
 )
+from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
 
 
 class RollbackFixUseCase:
-    def __init__(self, repository: ScanSessionRepository) -> None:
+    def __init__(self, repository: ScanSessionRepository, workflow_persistence: WorkflowPersistenceService | None = None) -> None:
         self.repository = repository
+        self.workflow_persistence = workflow_persistence
 
     async def execute(self, payload: RollbackFixRequest) -> RemediationExecutionResponse | None:
         session = await self.repository.get_by_id(payload.session_id)
@@ -52,6 +54,28 @@ class RollbackFixUseCase:
                 "updated_at": utc_now(),
             },
         ) or session
+        if self.workflow_persistence is not None:
+            await self.workflow_persistence.record_verification(
+                session_id=session.id,
+                finding_id=payload.finding_id,
+                fix_id=str(checkpoint.get("strategy_id", "")) or payload.finding_id,
+                status="rolled_back",
+                checks=rollback_notes,
+                payload={
+                    "checkpoint_id": str(checkpoint.get("id", "")),
+                    "target_file": target_file,
+                },
+            )
+            await self.workflow_persistence.record_audit(
+                session_id=session.id,
+                entity_type="finding",
+                entity_id=payload.finding_id,
+                action="remediation.rolled_back",
+                payload={
+                    "checkpoint_id": str(checkpoint.get("id", "")),
+                    "file": target_file,
+                },
+            )
         action = PatchApplicationEntity(
             finding_id=payload.finding_id,
             status="rolled_back",

@@ -106,6 +106,7 @@ class ScanSessionEntity:
     candidate_findings: list[FindingEntity] = field(default_factory=list)
     remediation_checkpoints: list[dict] = field(default_factory=list)
     last_verification: dict | None = None
+    latest_scan_job: dict | None = None
     workflow_summary: dict | None = None
     workflow_events: list[dict] = field(default_factory=list)
     error_message: str | None = None

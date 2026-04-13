@@ -6,9 +6,12 @@ import time
 from bson import ObjectId
 
 from app.core.exceptions import ExternalAIServiceError, InvalidSourcePathError
+from app.domain.entities.scan_job import build_scan_job_snapshot
 from app.domain.entities.scan import FindingEntity, ScanSessionEntity, utc_now
+from app.domain.repositories.scan_job_repository import ScanJobRepository
 from app.domain.repositories.scan_repository import ScanSessionRepository
 from app.domain.services.ai_client import SecurityAnalysisAIClient
+from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
 from app.infrastructure.services.coverage_calculation import build_progress_state, calculate_progress_metrics
 from app.infrastructure.services.duplicate_clustering import cluster_findings
 from app.infrastructure.services.evidence_extraction import extract_evidence
@@ -74,14 +77,22 @@ def create_initial_session(source_path: str, target_type: str, preset: str, scan
 
 
 class ScanExecutionService:
-    def __init__(self, repository: ScanSessionRepository, ai_client: SecurityAnalysisAIClient) -> None:
+    def __init__(
+        self,
+        repository: ScanSessionRepository,
+        ai_client: SecurityAnalysisAIClient,
+        job_repository: ScanJobRepository | None = None,
+        workflow_persistence: WorkflowPersistenceService | None = None,
+    ) -> None:
         self.repository = repository
         self.ai_client = ai_client
+        self.job_repository = job_repository
+        self.workflow_persistence = workflow_persistence
 
-    async def submit(self, session_id: str) -> None:
-        asyncio.create_task(self.run(session_id))
+    async def submit(self, session_id: str, job_id: str | None = None) -> None:
+        asyncio.create_task(self.run(session_id, job_id=job_id))
 
-    async def run(self, session_id: str) -> None:
+    async def run(self, session_id: str, job_id: str | None = None) -> None:
         session = await self.repository.get_by_id(session_id)
         if session is None:
             return
@@ -93,11 +104,37 @@ class ScanExecutionService:
             source = Path(session.source_path)
             source_root = source if source.is_dir() else source.parent
 
+            if job_id and self.job_repository is not None:
+                await self._update_job(
+                    session_id,
+                    job_id,
+                    status="running",
+                    stage="discovery",
+                    progress=1,
+                    attempts=1,
+                    started_at=utc_now(),
+                    error_message=None,
+                )
+            if self.workflow_persistence is not None:
+                await self.workflow_persistence.record_audit(
+                    session_id=session_id,
+                    entity_type="scan_job",
+                    entity_id=job_id or session_id,
+                    action="scan.started",
+                    payload={
+                        "repo": session.repo,
+                        "scan_mode": session.scan_mode,
+                        "target_type": session.target_type,
+                    },
+                )
+
             await self._update_with_logs(
                 session_id,
                 logs,
                 "Collecting repository files",
                 "Indexing the selected source and discovering the codebase shape.",
+                job_id=job_id,
+                job_stage="discovery",
                 status="scanning",
                 scan_mode=session.scan_mode,
                 current_phase="Discovery",
@@ -165,6 +202,8 @@ class ScanExecutionService:
                 logs,
                 "Mapping trust boundaries",
                 "Building the route map, auth boundaries, imports, sinks, and untrusted-input sources.",
+                job_id=job_id,
+                job_stage="mapping",
                 scan_mode=session.scan_mode,
                 current_phase="Repository mapping",
                 started_at=started_at,
@@ -227,6 +266,8 @@ class ScanExecutionService:
                 logs,
                 "Mapping trust boundaries",
                 "Building the route map, auth boundaries, imports, sinks, and untrusted-input sources.",
+                job_id=job_id,
+                job_stage="mapping",
                 scan_mode=session.scan_mode,
                 current_phase="Repository mapping",
                 started_at=started_at,
@@ -245,6 +286,8 @@ class ScanExecutionService:
                 logs,
                 "Prioritizing attack surfaces",
                 "Selecting the highest-risk paths for deeper security review.",
+                job_id=job_id,
+                job_stage="segmentation",
                 scan_mode=session.scan_mode,
                 current_phase="Segmentation",
                 started_at=started_at,
@@ -293,6 +336,8 @@ class ScanExecutionService:
                 logs,
                 "Tracing source-to-sink paths",
                 "Preparing prioritized path units and code blocks for deep review.",
+                job_id=job_id,
+                job_stage="path_tracing",
                 scan_mode=session.scan_mode,
                 current_phase="Path tracing",
                 started_at=started_at,
@@ -347,6 +392,8 @@ class ScanExecutionService:
                     logs,
                     "Reviewing prioritized paths",
                     f"Tracing exploitability across: {batch_files or 'current review batch'}.",
+                    job_id=job_id,
+                    job_stage="reviewing_paths",
                     scan_mode=session.scan_mode,
                     current_phase="Reviewing paths",
                     started_at=started_at,
@@ -410,6 +457,8 @@ class ScanExecutionService:
                         logs,
                         "Reviewing prioritized paths",
                         f"Reviewed batch {completed_batches}/{total_batches} and queued the next exploit path set.",
+                        job_id=job_id,
+                        job_stage="reviewing_paths",
                         scan_mode=session.scan_mode,
                         current_phase="Reviewing paths",
                         started_at=started_at,
@@ -458,6 +507,8 @@ class ScanExecutionService:
                 logs,
                 "Validating concrete findings",
                 "Rejecting speculative issues and keeping only defensible exploit paths.",
+                job_id=job_id,
+                job_stage="validation",
                 scan_mode=session.scan_mode,
                 current_phase="Validation",
                 started_at=started_at,
@@ -565,6 +616,8 @@ class ScanExecutionService:
                 logs,
                 "Validating concrete findings",
                 "Rejecting speculative issues and keeping only defensible exploit paths.",
+                job_id=job_id,
+                job_stage="validation",
                 scan_mode=session.scan_mode,
                 current_phase="Validation",
                 started_at=started_at,
@@ -581,6 +634,8 @@ class ScanExecutionService:
                 logs,
                 "Building final verdict",
                 "Summarizing reviewed coverage, severity, and security posture.",
+                job_id=job_id,
+                job_stage="scoring",
                 scan_mode=session.scan_mode,
                 current_phase="Scoring",
                 started_at=started_at,
@@ -664,6 +719,19 @@ class ScanExecutionService:
                 logs.append(f"Confirmed {len(findings)} validated findings. Highest severity: {findings[0].severity}.")
 
             finished_at = utc_now()
+            latest_scan_job = (
+                await self._update_job(
+                    session_id,
+                    job_id,
+                    status="completed",
+                    stage="completed",
+                    progress=100,
+                    finished_at=finished_at,
+                    error_message=None,
+                )
+                if job_id and self.job_repository is not None
+                else None
+            )
             await self.repository.update(
                 session_id,
                 {
@@ -740,17 +808,44 @@ class ScanExecutionService:
                     "candidate_findings": candidate_entities,
                     "security_score": security_score,
                     "score_rationale": score_calibration["rationale"],
+                    "latest_scan_job": latest_scan_job,
                     "unread": True,
                     "updated_at": finished_at,
                     "completed_at": finished_at,
                 },
             )
+            if self.workflow_persistence is not None:
+                await self.workflow_persistence.record_audit(
+                    session_id=session_id,
+                    entity_type="scan_job",
+                    entity_id=job_id or session_id,
+                    action="scan.completed",
+                    payload={
+                        "findings_count": len(findings),
+                        "candidate_findings_count": len(candidate_entities),
+                        "security_score": security_score,
+                        "status": "completed",
+                    },
+                )
         except Exception as exc:
             failed_at = utc_now()
             logger.exception("Scan execution failed", extra={"session_id": session_id, "source_path": session.source_path})
             friendly_error = _build_scan_failure_message(exc)
             logs.append("Scan failed before the final verdict was produced.")
             logs.append(friendly_error)
+            latest_scan_job = (
+                await self._update_job(
+                    session_id,
+                    job_id,
+                    status="failed",
+                    stage="failed",
+                    progress=100,
+                    finished_at=failed_at,
+                    error_message=friendly_error,
+                )
+                if job_id and self.job_repository is not None
+                else None
+            )
             await self.repository.update(
                 session_id,
                 {
@@ -780,10 +875,22 @@ class ScanExecutionService:
                     "progress_counters": {
                         "status": "failed",
                     },
+                    "latest_scan_job": latest_scan_job,
                     "updated_at": failed_at,
                     "completed_at": failed_at,
                 },
             )
+            if self.workflow_persistence is not None:
+                await self.workflow_persistence.record_audit(
+                    session_id=session_id,
+                    entity_type="scan_job",
+                    entity_id=job_id or session_id,
+                    action="scan.failed",
+                    payload={
+                        "status": "failed",
+                        "error_message": friendly_error,
+                    },
+                )
 
     async def _update_with_logs(
         self,
@@ -792,6 +899,8 @@ class ScanExecutionService:
         progress_message: str,
         preview: str,
         status: str = "scanning",
+        job_id: str | None = None,
+        job_stage: str | None = None,
         scan_mode: str | None = None,
         current_phase: str | None = None,
         started_at: float | None = None,
@@ -808,6 +917,15 @@ class ScanExecutionService:
             extra_updates.pop("current_phase", None)
         progress_counters = extra_updates.get("progress_counters")
         progress_state = build_progress_state(current_phase or progress_message, progress_counters)
+        latest_scan_job = None
+        if job_id and self.job_repository is not None:
+            latest_scan_job = await self._update_job(
+                session_id,
+                job_id,
+                status="running" if status == "scanning" else status,
+                stage=job_stage or (current_phase or progress_message),
+                progress=progress_state["progress"],
+            )
         await self.repository.update(
             session_id,
             {
@@ -820,10 +938,55 @@ class ScanExecutionService:
                 **({"scan_mode": scan_mode} if scan_mode else {}),
                 "preview": preview,
                 "progress_logs": logs[-12:],
+                **({"latest_scan_job": latest_scan_job} if latest_scan_job else {}),
                 "updated_at": utc_now(),
                 **extra_updates,
             },
         )
+
+    async def _update_job(
+        self,
+        session_id: str,
+        job_id: str | None,
+        *,
+        status: str,
+        stage: str,
+        progress: int,
+        attempts: int | None = None,
+        started_at=None,
+        finished_at=None,
+        error_message: str | None = None,
+    ) -> dict | None:
+        if not job_id or self.job_repository is None:
+            return None
+        updates = {
+            "status": status,
+            "stage": stage,
+            "progress": max(0, min(100, int(progress))),
+            "error_message": error_message,
+        }
+        if attempts is not None:
+            updates["attempts"] = attempts
+        if started_at is not None:
+            updates["started_at"] = started_at
+        if finished_at is not None:
+            updates["finished_at"] = finished_at
+        job = await self.job_repository.update(job_id, updates)
+        if job is None:
+            return {
+                "id": job_id,
+                "session_id": session_id,
+                "type": "scan",
+                "status": status,
+                "stage": stage,
+                "progress": progress,
+                "attempts": attempts or 0,
+                "error_message": error_message,
+                "created_at": utc_now(),
+                "started_at": started_at,
+                "finished_at": finished_at,
+            }
+        return build_scan_job_snapshot(job)
 
     def _append_runtime_events(self, logs: list[str]) -> None:
         for event in getattr(self.ai_client, "drain_runtime_events", lambda: [])():
