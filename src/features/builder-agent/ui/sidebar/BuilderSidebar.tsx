@@ -4,9 +4,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Clock3,
   Ellipsis,
-  FolderOpen,
   FolderPlus,
   PanelLeftClose,
   PenSquare,
@@ -20,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ShowMore } from "@/components/ui/show-more";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarFooter } from "@/features/sidebar-navigation/ui/SidebarFooter";
 import { WorkspaceModeSwitch } from "@/shared/ui/WorkspaceModeSwitch";
@@ -38,6 +37,7 @@ import { buildFilterSections } from "./sidebarFilters";
 
 interface BuilderSidebarProps {
   activeConversationId: string | null;
+  busyConversationIds: string[];
   currentWorkspaceId: string | null;
   expandedWorkspaceIds: string[];
   hasPreviousConversation: boolean;
@@ -69,6 +69,7 @@ interface BuilderSidebarProps {
 
 export function BuilderSidebar({
   activeConversationId,
+  busyConversationIds,
   currentWorkspaceId,
   expandedWorkspaceIds,
   hasPreviousConversation,
@@ -395,12 +396,20 @@ export function BuilderSidebar({
                         <div className="space-y-1.5">
                           {visibleThreads.map((thread) => {
                             const active = activeConversationId === thread.id;
+                            const busy = busyConversationIds.includes(thread.id);
                             const showThreadControls = active || hoveredWorkspaceThreadsId === group.id;
                             return (
                               <div key={thread.id} className={`flex items-center gap-2 rounded-xl px-2.5 py-2 transition-colors ${active ? "bg-card" : "hover:bg-card/70"}`}>
                                 <button onClick={() => onOpenConversation(thread.id)} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
                                   <AnimatedThreadTitle title={thread.title} />
-                                  <span className="shrink-0 text-xs text-txt-tertiary">{thread.updatedAt}</span>
+                                  {busy ? (
+                                    <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-[#a76924]">
+                                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+                                      <span>Working</span>
+                                    </span>
+                                  ) : (
+                                    <span className="shrink-0 text-xs text-txt-tertiary">{thread.updatedAt}</span>
+                                  )}
                                 </button>
                                 <div className="flex w-7 justify-end">
                                   <div className={`transition-opacity ${showThreadControls ? "opacity-100" : "pointer-events-none opacity-0"}`}>
@@ -425,10 +434,17 @@ export function BuilderSidebar({
                         </div>
 
                         {hasOverflow && (
-                          <button type="button" onClick={() => onToggleWorkspaceShowAll(group.id)} className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-txt-secondary transition-colors hover:bg-card hover:text-txt-primary">
-                            <FolderOpen size={12} />
-                            <span>{showAll ? "Show fewer" : `Show ${group.threads.length - 3} more`}</span>
-                          </button>
+                          <ShowMore
+                            className="mt-2 [&>button]:gap-1.5 [&>button]:px-2.5 [&>button]:py-1 [&>button]:text-xs [&>button_svg]:size-3.5"
+                            onClick={() => onToggleWorkspaceShowAll(group.id)}
+                          >
+                            {() => (
+                              <>
+                                <span>{showAll ? "Show fewer chats" : `Show ${group.threads.length - 3} more chats`}</span>
+                                <ChevronDown className={`size-4 transition-transform duration-200 ${showAll ? "rotate-180" : ""}`} />
+                              </>
+                            )}
+                          </ShowMore>
                         )}
                       </div>
                     </motion.div>

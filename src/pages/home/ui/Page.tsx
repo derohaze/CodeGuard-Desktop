@@ -144,6 +144,7 @@ export default function Page() {
     addWorkspace,
     archiveWorkspaceThreads,
     archiveThread,
+    busyConversationIds,
     collapseAllWorkspaces,
     composerSettings,
     createPermanentWorktree,
@@ -1266,6 +1267,7 @@ export default function Page() {
               onToggleWorkspace={toggleWorkspace}
               onToggleWorkspaceShowAll={toggleWorkspaceShowAll}
               onWorkspaceModeChange={setWorkspaceMode}
+              busyConversationIds={busyConversationIds}
               hasPreviousConversation={hasPreviousConversation}
               showAllWorkspaceIds={showAllWorkspaceIds}
               threadGroups={threadGroups}

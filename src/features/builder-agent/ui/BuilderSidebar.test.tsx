@@ -37,6 +37,7 @@ describe("BuilderSidebar", () => {
 
     const props = {
       activeConversationId: "thread-1",
+      busyConversationIds: [],
       currentWorkspaceId: "workspace-1",
       expandedWorkspaceIds: ["workspace-1"],
       hasPreviousConversation: false,
@@ -115,5 +116,52 @@ describe("BuilderSidebar", () => {
     expect(screen.getByText("Mind Misery")).toBeInTheDocument();
 
     vi.useRealTimers();
+  });
+
+  it("shows a working indicator for busy threads", () => {
+    render(
+      <TooltipProvider>
+        <BuilderSidebar
+          activeConversationId="thread-1"
+          busyConversationIds={["thread-1"]}
+          currentWorkspaceId="workspace-1"
+          expandedWorkspaceIds={["workspace-1"]}
+          hasPreviousConversation={false}
+          isCollapsed={false}
+          onAddWorkspace={vi.fn()}
+          onArchiveThread={vi.fn()}
+          onArchiveWorkspaceThreads={vi.fn()}
+          onCollapseAllWorkspaces={vi.fn()}
+          onCreatePermanentWorktree={vi.fn()}
+          onCreateWorkspaceThread={vi.fn()}
+          onExpandAllWorkspaces={vi.fn()}
+          onOpenConversation={vi.fn()}
+          onOpenSettings={vi.fn()}
+          onOpenWorkspaceInExplorer={vi.fn()}
+          onRemoveWorkspace={vi.fn()}
+          onRemoveThread={vi.fn()}
+          onReorderWorkspaces={vi.fn()}
+          onRenameWorkspace={vi.fn()}
+          onRenameThread={vi.fn()}
+          onReopenPreviousConversation={vi.fn()}
+          onToggleCollapse={vi.fn()}
+          onToggleWorkspace={vi.fn()}
+          onToggleWorkspaceShowAll={vi.fn()}
+          onWorkspaceModeChange={vi.fn()}
+          showAllWorkspaceIds={[]}
+          threadGroups={[
+            {
+              id: "workspace-1",
+              label: "project x",
+              path: "D:\\workspace\\project-x",
+              threads: [{ id: "thread-1", title: "Mind Misery", updatedAt: "now" }],
+            },
+          ]}
+          workspaceMode="builder"
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Working")).toBeInTheDocument();
   });
 });

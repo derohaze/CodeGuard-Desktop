@@ -268,7 +268,7 @@ export function BuilderConversationView({
                 key={message.id}
                 className="ml-auto max-w-[72%] rounded-[24px] border border-[#1e1b18] bg-[#1e1b18] px-5 py-4 text-[15px] leading-7 text-white shadow-card"
               >
-                <BuilderMessageText text={message.text} isStreaming={false} />
+                <BuilderMessageText text={message.text} isStreaming={false} tone="inverted" />
               </div>
             ) : (
               <div key={message.id} className="max-w-[92%] px-2 py-1 text-[15px] leading-8 text-txt-primary">

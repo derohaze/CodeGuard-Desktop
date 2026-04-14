@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { builderPromptSuggestions } from "../mockBuilderAgent";
 import { type PermissionMode, type ResponseSpeed } from "../lib/types";
 import { useBuilderComposerSettings } from "./useBuilderComposerSettings";
@@ -66,6 +67,14 @@ export function useBuilderAgent() {
     });
   };
 
+  const busyConversationIds = useMemo(
+    () =>
+      Object.entries(workspaceState.messageMap).flatMap(([conversationId, messages]) =>
+        messages.some((message) => message.isStreaming) ? [conversationId] : [],
+      ),
+    [workspaceState.messageMap],
+  );
+
   return {
     activeConversation: workspaceState.activeConversation,
     activeConversationId: workspaceState.activeConversationId,
@@ -75,6 +84,7 @@ export function useBuilderAgent() {
     isStreaming,
     messages: workspaceState.messages,
     composerSettings,
+    busyConversationIds,
     promptSuggestions: builderPromptSuggestions,
     showAllWorkspaceIds: workspaceState.showAllWorkspaceIds,
     sortMode: workspaceState.sortMode,
