@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Archive,
@@ -105,9 +105,15 @@ export function BuilderChatScreen({
   onCreatePermanentWorktree,
 }: BuilderChatScreenProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const scrollToLatestRef = useRef<(() => void) | null>(null);
   const [pendingPermissionMode, setPendingPermissionMode] = useState<"default" | "full-access" | null>(null);
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const contextUsage = 85;
+
+  const handleSendRequest = useCallback(() => {
+    scrollToLatestRef.current?.();
+    onSend();
+  }, [onSend]);
 
   const handleComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== "Enter" || event.shiftKey) return;
@@ -117,7 +123,7 @@ export function BuilderChatScreen({
       return;
     }
     if (!draft.trim()) return;
-    onSend();
+    handleSendRequest();
   };
 
   useEffect(() => {
@@ -195,6 +201,9 @@ export function BuilderChatScreen({
           onCreatePermanentWorktree={onCreatePermanentWorktree}
           onOpenWorkspaceInExplorer={onOpenWorkspaceInExplorer}
           onRenameConversation={onRenameConversation}
+          registerScrollToLatest={(callback) => {
+            scrollToLatestRef.current = callback;
+          }}
         />
       )}
 
@@ -296,7 +305,7 @@ export function BuilderChatScreen({
                     <button
                       className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45"
                       type="button"
-                      onClick={isStreaming ? onStopStreaming : onSend}
+                      onClick={isStreaming ? onStopStreaming : handleSendRequest}
                       disabled={!isStreaming && !draft.trim()}
                       aria-label={isStreaming ? "Stop response" : "Send message"}
                     >
@@ -496,6 +505,7 @@ function BuilderConversationView({
   onCreatePermanentWorktree,
   onOpenWorkspaceInExplorer,
   onRenameConversation,
+  registerScrollToLatest,
 }: {
   activeConversationId: string | null;
   currentWorkspaceId: string | null;
@@ -507,6 +517,7 @@ function BuilderConversationView({
   onCreatePermanentWorktree: (workspaceId: string) => void;
   onOpenWorkspaceInExplorer: (workspaceId: string) => void;
   onRenameConversation: (conversationId: string) => void;
+  registerScrollToLatest: (callback: () => void) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const followOutputRef = useRef(true);
@@ -514,47 +525,29 @@ function BuilderConversationView({
   const scrollTargetRef = useRef<number>(0);
   const lastScrollTopRef = useRef(0);
   const programmaticScrollRef = useRef(false);
+  const pendingInitialPositionRef = useRef(false);
+  const lastConversationIdRef = useRef<string | null>(null);
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
 
-  useEffect(() => {
+  const setFollowOutput = useCallback((shouldFollow: boolean) => {
+    followOutputRef.current = shouldFollow;
+    setShowJumpToBottom((current) => (current === !shouldFollow ? current : !shouldFollow));
+  }, []);
+
+  const animateScrollToBottom = useCallback((options?: { forceFollow?: boolean; speed?: number; maxStep?: number; minStep?: number }) => {
     const container = scrollRef.current;
     if (!container) return;
 
-    lastScrollTopRef.current = container.scrollTop;
+    const forceFollow = options?.forceFollow ?? true;
+    const speed = options?.speed ?? 0.1;
+    const maxStep = options?.maxStep ?? 14;
+    const minStep = options?.minStep ?? 0.65;
 
-    const updateFollowMode = () => {
-      const currentTop = container.scrollTop;
-      const wasProgrammatic = programmaticScrollRef.current;
-      programmaticScrollRef.current = false;
-
-      const distanceFromBottom =
-        container.scrollHeight - currentTop - container.clientHeight;
-      const isNearBottom = distanceFromBottom <= 48;
-
-      if (isNearBottom) {
-        followOutputRef.current = true;
-      } else if (!wasProgrammatic || currentTop < lastScrollTopRef.current) {
-        followOutputRef.current = false;
-        if (currentTop < lastScrollTopRef.current && scrollFrameRef.current !== null) {
-          window.cancelAnimationFrame(scrollFrameRef.current);
-          scrollFrameRef.current = null;
-        }
-      }
-
-      lastScrollTopRef.current = currentTop;
-    };
-
-    updateFollowMode();
-    container.addEventListener("scroll", updateFollowMode);
-
-    return () => {
-      container.removeEventListener("scroll", updateFollowMode);
-    };
-  }, []);
-
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container || !followOutputRef.current) return;
-
+    if (forceFollow) {
+      setFollowOutput(true);
+    } else if (!followOutputRef.current) {
+      return;
+    }
     scrollTargetRef.current = Math.max(0, container.scrollHeight - container.clientHeight);
     if (scrollFrameRef.current !== null) {
       return;
@@ -576,23 +569,127 @@ function BuilderConversationView({
       const current = activeContainer.scrollTop;
       const distance = target - current;
 
-      if (Math.abs(distance) <= 1) {
+      if (Math.abs(distance) <= 0.8) {
         activeContainer.scrollTop = target;
-        followOutputRef.current = true;
+        setFollowOutput(true);
         lastScrollTopRef.current = target;
         scrollFrameRef.current = null;
         return;
       }
 
       const nextTop =
-        current + Math.sign(distance) * Math.max(1, Math.abs(distance) * 0.16);
+        current + Math.sign(distance) * Math.min(maxStep, Math.max(minStep, Math.abs(distance) * speed));
       programmaticScrollRef.current = true;
       activeContainer.scrollTop = distance > 0 ? Math.min(target, nextTop) : Math.max(target, nextTop);
       scrollFrameRef.current = window.requestAnimationFrame(step);
     };
 
     scrollFrameRef.current = window.requestAnimationFrame(step);
-  }, [messages]);
+  }, [setFollowOutput]);
+
+  const startSmoothScrollToBottom = useCallback(() => {
+    animateScrollToBottom({
+      forceFollow: false,
+      speed: 0.095,
+      maxStep: 13,
+      minStep: 0.6,
+    });
+  }, [animateScrollToBottom]);
+
+  const scrollToLatestFromComposer = useCallback(() => {
+    animateScrollToBottom({
+      forceFollow: true,
+      speed: 0.18,
+      maxStep: 22,
+      minStep: 1.2,
+    });
+  }, [animateScrollToBottom]);
+
+  const jumpToBottomQuick = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    setFollowOutput(true);
+    if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = null;
+    }
+    const target = Math.max(0, container.scrollHeight - container.clientHeight);
+    programmaticScrollRef.current = true;
+    container.scrollTop = target;
+    lastScrollTopRef.current = target;
+  }, [setFollowOutput]);
+
+  useEffect(() => {
+    registerScrollToLatest(scrollToLatestFromComposer);
+    return () => {
+      registerScrollToLatest(() => {});
+    };
+  }, [registerScrollToLatest, scrollToLatestFromComposer]);
+
+  useEffect(() => {
+    if (activeConversationId !== lastConversationIdRef.current) {
+      lastConversationIdRef.current = activeConversationId;
+      pendingInitialPositionRef.current = true;
+    }
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || !pendingInitialPositionRef.current) {
+      return;
+    }
+
+    const target = Math.max(0, container.scrollHeight - container.clientHeight);
+    programmaticScrollRef.current = true;
+    container.scrollTop = target;
+    lastScrollTopRef.current = target;
+
+    const hasStreamingMessage = messages.some((message) => message.isStreaming);
+    setFollowOutput(hasStreamingMessage);
+    pendingInitialPositionRef.current = false;
+  }, [messages, setFollowOutput]);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    lastScrollTopRef.current = container.scrollTop;
+
+    const updateFollowMode = () => {
+      const currentTop = container.scrollTop;
+      const wasProgrammatic = programmaticScrollRef.current;
+      programmaticScrollRef.current = false;
+
+      const distanceFromBottom =
+        container.scrollHeight - currentTop - container.clientHeight;
+      const isNearBottom = distanceFromBottom <= 48;
+
+      if (isNearBottom) {
+        setFollowOutput(true);
+      } else if (!wasProgrammatic || currentTop < lastScrollTopRef.current) {
+        setFollowOutput(false);
+        if (currentTop < lastScrollTopRef.current && scrollFrameRef.current !== null) {
+          window.cancelAnimationFrame(scrollFrameRef.current);
+          scrollFrameRef.current = null;
+        }
+      }
+
+      lastScrollTopRef.current = currentTop;
+    };
+
+    updateFollowMode();
+    container.addEventListener("scroll", updateFollowMode);
+
+    return () => {
+      container.removeEventListener("scroll", updateFollowMode);
+    };
+  }, [setFollowOutput]);
+
+  useEffect(() => {
+    if (!followOutputRef.current) return;
+    startSmoothScrollToBottom();
+  }, [messages, startSmoothScrollToBottom]);
 
   useEffect(() => () => {
     if (scrollFrameRef.current !== null) {
@@ -650,7 +747,7 @@ function BuilderConversationView({
         </div>
       </div>
 
-      <div ref={scrollRef} className="hide-scrollbar flex-1 overflow-y-auto dotted-bg px-8 py-8">
+      <div ref={scrollRef} className="hide-scrollbar relative flex-1 overflow-y-auto dotted-bg px-8 py-8">
         <div className="mx-auto flex w-full max-w-[980px] flex-col gap-4">
           {messages.map((message) =>
             message.role === "user" ? (
@@ -684,6 +781,19 @@ function BuilderConversationView({
             ),
           )}
         </div>
+        {showJumpToBottom && (
+          <div className="pointer-events-none sticky bottom-4 z-10 mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={jumpToBottomQuick}
+              aria-label="Jump to latest message"
+              className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border bg-card text-txt-primary shadow-[0_12px_24px_rgba(52,42,28,0.12)] transition-colors hover:bg-surface"
+              style={{ borderColor: "hsl(var(--border-soft))" }}
+            >
+              <ChevronDown size={18} />
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

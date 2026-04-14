@@ -62,5 +62,6 @@ describe("BuilderChatScreen", () => {
     expect(screen.queryByText("GPT-5.4")).not.toBeInTheDocument();
     expect(screen.queryByText("Medium")).not.toBeInTheDocument();
     expect(screen.getByText("Thinking...")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Jump to latest message")).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+import re
 
 from app.builder_agent.repository import BuilderAgentRepository
 from app.core.config import get_settings
@@ -272,6 +273,10 @@ class BuilderAgentService:
             existing_thread = await self.repository.get_thread(active_thread_id)
             if existing_thread is None or str(existing_thread["workspace_id"]) != normalized_workspace_id:
                 raise CodeGuardError("Thread not found for this workspace.")
+            derived_title = _title_from_message(normalized_message)
+            existing_title = str(existing_thread.get("title", "")).strip()
+            if _should_replace_thread_title(existing_title, normalized_message):
+                await self.repository.rename_thread(active_thread_id, derived_title)
 
         await self.repository.add_message(
             workspace_id=normalized_workspace_id,
@@ -308,4 +313,89 @@ def _title_from_message(message: str) -> str:
     cleaned = " ".join(message.split())
     if not cleaned:
         return "New chat"
-    return cleaned[:96]
+    normalized = _strip_title_prefixes(cleaned)
+    normalized = _strip_leading_punctuation(normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip(" -_:,.;!?")
+    if not normalized:
+        normalized = cleaned
+
+    words = normalized.split()
+    candidate = " ".join(words[:6]).strip()
+    if len(candidate) < 6 and len(words) > 6:
+        candidate = " ".join(words[:8]).strip()
+    if len(candidate) < 4:
+        candidate = normalized
+
+    candidate = _sentence_case_title(candidate[:72].strip())
+    return candidate or "New chat"
+
+
+def _should_replace_thread_title(existing_title: str, message: str) -> bool:
+    if not existing_title:
+        return True
+
+    normalized_title = " ".join(existing_title.split()).strip().casefold()
+    normalized_message = " ".join(message.split()).strip()
+    if not normalized_message:
+        return normalized_title in {"", "new chat"}
+
+    normalized_message_casefold = normalized_message.casefold()
+    if normalized_title == "new chat":
+        return True
+    if normalized_title == normalized_message_casefold:
+        return True
+    if normalized_title == normalized_message[:96].strip().casefold():
+        return True
+    return False
+
+
+def _strip_title_prefixes(text: str) -> str:
+    prefixes = (
+        "write me ",
+        "write ",
+        "give me ",
+        "make me ",
+        "create ",
+        "generate ",
+        "a topic about ",
+        "topic about ",
+        "an article about ",
+        "article about ",
+        "essay about ",
+        "doc about ",
+        "documentation about ",
+        "explain ",
+        "tell me about ",
+        "موضوع عن ",
+        "اكتب عن ",
+        "اكتبلي عن ",
+        "اعمل موضوع عن ",
+        "عايز موضوع عن ",
+        "عايز عنوان عن ",
+        "مقال عن ",
+        "شرح عن ",
+    )
+
+    lowered = text.casefold()
+    for prefix in prefixes:
+        if lowered.startswith(prefix.casefold()):
+            return text[len(prefix):].strip()
+    return text
+
+
+def _strip_leading_punctuation(text: str) -> str:
+    return text.lstrip(" -_:,.;!?[](){}\"'")
+
+
+def _sentence_case_title(text: str) -> str:
+    parts = [part for part in re.split(r"(\s+)", text) if part]
+    transformed: list[str] = []
+    for part in parts:
+        if part.isspace():
+            transformed.append(part)
+            continue
+        if re.search(r"[A-Za-z]", part):
+            transformed.append(part[:1].upper() + part[1:])
+        else:
+            transformed.append(part)
+    return "".join(transformed)

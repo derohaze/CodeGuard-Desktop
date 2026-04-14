@@ -9,7 +9,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.builder_agent.service import BuilderAgentService
+from app.builder_agent.service import BuilderAgentService, _title_from_message
 
 
 class InMemoryBuilderRepository:
@@ -256,6 +256,28 @@ class BuilderAgentServiceTests(unittest.TestCase):
         self.assertIn("done", event_types)
         done_event = [item for item in events if item["type"] == "done"][0]
         self.assertEqual(done_event["assistant_message"]["text"], "a ck")
+
+    def test_title_from_message_extracts_topic_instead_of_raw_prompt(self):
+        self.assertEqual(_title_from_message("A topic about mind misery"), "Mind Misery")
+        self.assertEqual(_title_from_message("موضوع عن الأمن السيبراني الحديث"), "الأمن السيبراني الحديث")
+
+    def test_send_message_replaces_placeholder_thread_title_with_topic_title(self):
+        repository = InMemoryBuilderRepository()
+        service = BuilderAgentService(repository=repository, provider=StubBuilderProvider())
+        thread = asyncio.run(service.create_thread(repository.workspace_id))
+
+        result = asyncio.run(
+            service.send_message(
+                workspace_id=repository.workspace_id,
+                thread_id=thread["id"],
+                message="A topic about mind misery",
+                permission_mode="full-access",
+                plan_mode=False,
+                response_speed="normal",
+            )
+        )
+
+        self.assertEqual(result["thread"]["title"], "Mind Misery")
 
 
 if __name__ == "__main__":

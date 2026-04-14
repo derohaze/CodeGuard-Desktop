@@ -132,6 +132,8 @@ export function useBuilderAgent() {
   const streamDrainFrameRef = useRef<number | null>(null);
   const streamWarmupTimeoutRef = useRef<number | null>(null);
   const streamDrainResolverRef = useRef<(() => void) | null>(null);
+  const streamRevealBudgetRef = useRef(0);
+  const streamLastDrainAtRef = useRef<number | null>(null);
 
   const persistComposerSettings = useCallback((nextSettings: BuilderComposerSettings) => {
     setComposerSettings(nextSettings);
@@ -264,6 +266,8 @@ export function useBuilderAgent() {
     streamSourceCompletedRef.current = true;
     streamDrainStartedRef.current = false;
     streamUnitsRef.current = [];
+    streamRevealBudgetRef.current = 0;
+    streamLastDrainAtRef.current = null;
     markActiveAssistantStopped();
     if (streamDrainResolverRef.current) {
       streamDrainResolverRef.current();
@@ -582,7 +586,7 @@ export function useBuilderAgent() {
       let threadId = activeConversationId;
       if (!threadId) {
         try {
-          const created = await createBuilderThread(currentWorkspace.id, prompt.slice(0, 96));
+          const created = await createBuilderThread(currentWorkspace.id);
           threadId = created.id;
           setActiveConversationId(created.id);
           setCurrentWorkspaceId(created.workspaceId);
@@ -627,6 +631,8 @@ export function useBuilderAgent() {
       streamVisibleTextRef.current = "";
       streamSourceCompletedRef.current = false;
       streamDrainStartedRef.current = false;
+      streamRevealBudgetRef.current = 0;
+      streamLastDrainAtRef.current = null;
 
       try {
         const payload = {
@@ -687,6 +693,10 @@ export function useBuilderAgent() {
           }
 
           const bufferLength = streamUnitsRef.current.length;
+          const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+          const lastDrainAt = streamLastDrainAtRef.current ?? now;
+          streamLastDrainAtRef.current = now;
+
           if (!streamDrainStartedRef.current) {
             const shouldStart =
               streamSourceCompletedRef.current || bufferLength >= STREAM_REVEAL_START_BUFFER;
@@ -694,6 +704,8 @@ export function useBuilderAgent() {
               return;
             }
             streamDrainStartedRef.current = true;
+            streamLastDrainAtRef.current = now;
+            streamRevealBudgetRef.current = Math.max(streamRevealBudgetRef.current, 1);
           }
 
           if (bufferLength === 0) {
@@ -705,7 +717,23 @@ export function useBuilderAgent() {
             return;
           }
 
-          const batchSize = resolveStreamRevealBatchSize(bufferLength, streamSourceCompletedRef.current);
+          const charsPerSecond = streamSourceCompletedRef.current
+            ? STREAM_REVEAL_COMPLETION_CPS
+            : STREAM_REVEAL_STREAMING_CPS;
+          const elapsedMs = Math.max(0, now - lastDrainAt);
+          streamRevealBudgetRef.current += (elapsedMs / 1000) * charsPerSecond;
+
+          const batchSize = resolveStreamRevealBatchSize(
+            bufferLength,
+            streamSourceCompletedRef.current,
+            streamRevealBudgetRef.current,
+          );
+          if (batchSize <= 0) {
+            streamDrainFrameRef.current = window.requestAnimationFrame(drainBufferedText);
+            return;
+          }
+
+          streamRevealBudgetRef.current = Math.max(0, streamRevealBudgetRef.current - batchSize);
           const nextChunk = streamUnitsRef.current.splice(0, batchSize).join("");
           if (nextChunk) {
             pushVisibleText(streamVisibleTextRef.current + nextChunk);
@@ -834,6 +862,8 @@ export function useBuilderAgent() {
         streamUnitsRef.current = [];
         streamSourceCompletedRef.current = true;
         streamDrainStartedRef.current = false;
+        streamRevealBudgetRef.current = 0;
+        streamLastDrainAtRef.current = null;
         if (streamDrainResolverRef.current) {
           streamDrainResolverRef.current();
           streamDrainResolverRef.current = null;
@@ -907,20 +937,30 @@ function splitStreamDisplayUnits(text: string): string[] {
   return Array.from(text);
 }
 
-const STREAM_REVEAL_START_BUFFER = 32;
-const STREAM_REVEAL_WARMUP_MS = 160;
+const STREAM_REVEAL_START_BUFFER = 72;
+const STREAM_REVEAL_WARMUP_MS = 180;
+const STREAM_REVEAL_STREAMING_CPS = 40;
+const STREAM_REVEAL_COMPLETION_CPS = 92;
 
-function resolveStreamRevealBatchSize(bufferLength: number, sourceCompleted: boolean): number {
-  if (sourceCompleted) {
-    if (bufferLength > 160) return 10;
-    if (bufferLength > 96) return 7;
-    if (bufferLength > 48) return 5;
-    if (bufferLength > 24) return 3;
-    if (bufferLength > 10) return 2;
-    return 1;
+function resolveStreamRevealBatchSize(
+  bufferLength: number,
+  sourceCompleted: boolean,
+  revealBudget: number,
+): number {
+  if (!sourceCompleted && revealBudget < 1) {
+    return 0;
   }
-  if (bufferLength > 160) return 4;
-  if (bufferLength > 96) return 3;
-  if (bufferLength > 40) return 2;
-  return 1;
+
+  if (sourceCompleted) {
+    if (bufferLength > 240) return Math.max(8, Math.floor(revealBudget));
+    if (bufferLength > 160) return Math.max(6, Math.floor(revealBudget));
+    if (bufferLength > 96) return Math.max(4, Math.floor(revealBudget));
+    if (bufferLength > 36) return Math.max(2, Math.floor(revealBudget));
+    return Math.max(1, Math.floor(revealBudget));
+  }
+
+  if (bufferLength > 220) return Math.max(3, Math.floor(revealBudget));
+  if (bufferLength > 140) return Math.max(2, Math.floor(revealBudget));
+  if (bufferLength > 80) return Math.max(1, Math.floor(revealBudget));
+  return Math.floor(revealBudget);
 }
