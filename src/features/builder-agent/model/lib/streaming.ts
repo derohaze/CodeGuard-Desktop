@@ -1,8 +1,8 @@
-const STREAM_REVEAL_START_BUFFER = 64;
-const STREAM_REVEAL_WARMUP_MS = 180;
-const STREAM_REVEAL_STREAMING_CPS = 52;
-const STREAM_REVEAL_COMPLETION_CPS = 180;
-const STREAM_REVEAL_TARGET_BUFFER = 96;
+const STREAM_REVEAL_START_BUFFER = 72;
+const STREAM_REVEAL_WARMUP_MS = 120;
+const STREAM_REVEAL_STREAMING_CPS = 60;
+const STREAM_REVEAL_COMPLETION_CPS = 220;
+const STREAM_REVEAL_TARGET_BUFFER = 144;
 
 export const builderStreamConfig = {
   startBuffer: STREAM_REVEAL_START_BUFFER,
@@ -29,7 +29,7 @@ export function resolveStreamRevealBatchSize(
     return 0;
   }
 
-  if (!sourceCompleted && revealBudget < 1 && bufferLength < 10) {
+  if (!sourceCompleted && revealBudget < 1 && bufferLength < 8) {
     return 0;
   }
 
@@ -41,14 +41,14 @@ export function resolveStreamRevealBatchSize(
     return Math.max(1, Math.floor(revealBudget));
   }
 
-  if (bufferLength > 220) return Math.max(5, Math.floor(revealBudget));
-  if (bufferLength > 140) return Math.max(4, Math.floor(revealBudget));
-  if (bufferLength > 80) return Math.max(3, Math.floor(revealBudget));
-  if (bufferLength > 32) return Math.max(2, Math.floor(revealBudget));
+  if (bufferLength > 260) return Math.max(4, Math.floor(revealBudget));
+  if (bufferLength > 180) return Math.max(3, Math.floor(revealBudget));
+  if (bufferLength > 96) return Math.max(2, Math.floor(revealBudget));
+  if (bufferLength > 48) return Math.max(1, Math.floor(revealBudget));
   return Math.max(1, Math.floor(revealBudget));
 }
 
 export function resolveStreamingCharsPerSecond(bufferLength: number): number {
-  const normalized = Math.max(0.35, Math.min(1.6, bufferLength / STREAM_REVEAL_TARGET_BUFFER));
-  return Math.max(24, Math.round(STREAM_REVEAL_STREAMING_CPS * normalized));
+  const normalized = Math.max(0.18, Math.min(1.8, bufferLength / STREAM_REVEAL_TARGET_BUFFER));
+  return Math.max(10, Math.round(STREAM_REVEAL_STREAMING_CPS * normalized));
 }

@@ -35,7 +35,7 @@ export function BuilderStructuredMessage({
     <Typography
       dir="auto"
       className={cn(
-        "space-y-4 text-start",
+        "space-y-3.5 text-[14px] leading-7 text-start",
         isInverted &&
           "text-white [&_a]:text-[#f5d2a5] [&_code]:bg-white/10 [&_code]:text-white [&_blockquote]:border-white/20",
       )}
@@ -76,7 +76,7 @@ function RenderedBlock({
       );
     case "paragraph":
       return (
-        <p className={cn("leading-8 text-txt-primary", isInverted && "text-white")}>
+        <p className={cn("leading-7 text-txt-primary", isInverted && "text-white")}>
           {renderInline(block.text)}
           {isStreaming && isLast ? (
             <span className="ml-0.5 inline-block h-5 w-[2px] animate-pulse align-[-2px] bg-current opacity-45" />
@@ -94,7 +94,7 @@ function RenderedBlock({
           )}
         >
           {block.items.map((item) => (
-            <li key={item} className="ps-1 leading-8">
+            <li key={item} className="ps-1 leading-7">
               {renderInline(item)}
             </li>
           ))}
@@ -137,7 +137,7 @@ function RenderedBlock({
               isInverted && "border-white/10 bg-white/5",
             )}
           >
-            <Table className="min-w-[420px] text-[14px]">
+            <Table className="min-w-[420px] text-[13px]">
               <TableHeader>
                 <TableRow
                   className={cn(
@@ -171,7 +171,7 @@ function RenderedBlock({
                       <TableCell
                         key={`${rowIndex}-${cellIndex}`}
                         className={cn(
-                          "px-4 py-3 align-top leading-7 text-txt-primary",
+                          "px-4 py-3 align-top leading-[1.6rem] text-txt-primary",
                           isInverted && "text-white",
                         )}
                       >
@@ -199,7 +199,7 @@ function RenderedBlock({
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 text-[12px] text-[#cbb8a5]">
               <span>{block.language ?? "code"}</span>
             </div>
-            <pre className="overflow-x-auto p-4 text-[13px] leading-6">
+            <pre className="overflow-x-auto p-4 text-[12px] leading-[1.35rem]">
               <code>{block.code}</code>
             </pre>
           </div>

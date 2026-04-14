@@ -266,12 +266,12 @@ export function BuilderConversationView({
             message.role === "user" ? (
               <div
                 key={message.id}
-                className="ml-auto max-w-[72%] rounded-[24px] border border-[#1e1b18] bg-[#1e1b18] px-5 py-4 text-[15px] leading-7 text-white shadow-card"
+                className="ml-auto max-w-[70%] rounded-[22px] border border-[#1e1b18] bg-[#1e1b18] px-[18px] py-3.5 text-[14px] leading-[1.65rem] text-white shadow-card"
               >
                 <BuilderMessageText text={message.text} isStreaming={false} tone="inverted" />
               </div>
             ) : (
-              <div key={message.id} className="max-w-[92%] px-2 py-1 text-[15px] leading-8 text-txt-primary">
+              <div key={message.id} className="max-w-[90%] px-2 py-1 text-[14px] leading-7 text-txt-primary">
                 <div className="space-y-2">
                   {message.isStreaming && !message.text && (
                     <div className="inline-flex items-center px-1 py-1 text-[13px] text-[#6d655c]">
