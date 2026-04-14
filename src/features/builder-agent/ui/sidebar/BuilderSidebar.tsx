@@ -24,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { SidebarFooter } from "@/features/sidebar-navigation/ui/SidebarFooter";
 import { WorkspaceModeSwitch } from "@/shared/ui/WorkspaceModeSwitch";
 import type { WorkspaceMode } from "@/shared/types/app";
+import { BrandModeHeading } from "@/shared/ui/BrandModeHeading";
 import type { BuilderThreadGroup } from "../../model/mockBuilderAgent";
 import { BuilderCommandMenu } from "../BuilderCommandMenu";
 import { AnimatedThreadTitle } from "./AnimatedThreadTitle";
@@ -172,16 +173,16 @@ export function BuilderSidebar({
       aria-hidden={isCollapsed}
     >
       <div className="px-5 pb-2 pt-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-3">
-            <h1 className="font-brand text-[22px] font-normal tracking-[-0.01em] text-txt-primary">Khwarizm</h1>
+        <div className="relative">
+          <div className="space-y-3 pr-8">
+            <BrandModeHeading mode={workspaceMode} />
             <WorkspaceModeSwitch mode={workspaceMode} onChange={onWorkspaceModeChange} />
           </div>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <button
                 onClick={onToggleCollapse}
-                className="p-1 text-txt-secondary transition-colors hover:text-txt-primary"
+                className="absolute right-0 top-0 p-1 text-txt-secondary transition-colors hover:text-txt-primary"
                 aria-label="Hide sidebar"
               >
                 <PanelLeftClose size={17} />
