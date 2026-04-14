@@ -1,0 +1,36 @@
+import { Sparkles } from "lucide-react";
+import type { BuilderPromptSuggestion } from "../../model/mockBuilderAgent";
+
+export function BuilderNewChat({
+  promptSuggestions,
+  workspaceLabel,
+}: {
+  promptSuggestions: BuilderPromptSuggestion[];
+  workspaceLabel: string;
+}) {
+  return (
+    <div className="flex flex-1 items-center justify-center dotted-bg px-8 py-10">
+      <div className="mx-auto flex w-full max-w-[980px] flex-col items-center">
+        <h2 className="text-[42px] font-semibold tracking-[-0.05em] text-txt-primary">Let&apos;s build</h2>
+        <p className="mt-2 text-[18px] text-txt-secondary">{workspaceLabel}</p>
+
+        <div className="mt-12 grid w-full grid-cols-3 gap-4 max-[1100px]:grid-cols-1">
+          {promptSuggestions.map((suggestion) => (
+            <button
+              key={suggestion.id}
+              type="button"
+              className="rounded-[24px] border bg-[#f5efe3] px-5 py-5 text-left shadow-[0_10px_24px_rgba(52,42,28,0.05)] transition-colors hover:bg-[#efe6d4]"
+              style={{ borderColor: "hsl(var(--border-soft))" }}
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-card text-[#8a775b]">
+                <Sparkles size={16} />
+              </div>
+              <p className="mt-4 text-[18px] font-medium leading-7 text-txt-primary">{suggestion.title}</p>
+              <p className="mt-2 text-sm leading-6 text-txt-secondary">{suggestion.description}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

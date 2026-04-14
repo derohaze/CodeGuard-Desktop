@@ -1,0 +1,80 @@
+import { useCallback, useRef } from "react";
+import { motion } from "framer-motion";
+import { BuilderComposer } from "./BuilderComposer";
+import { BuilderConversationView } from "./BuilderConversationView";
+import { BuilderNewChat } from "./BuilderNewChat";
+import type { BuilderChatScreenProps } from "./types";
+
+export function BuilderChatScreen({
+  activeConversationId,
+  composerSettings,
+  currentWorkspaceId,
+  currentWorkspacePath,
+  conversationTitle,
+  conversationSubtitle,
+  draft,
+  isNewChat,
+  isStreaming,
+  messages,
+  promptSuggestions,
+  onArchiveConversation,
+  onOpenWorkspaceInExplorer,
+  onPermissionModeChange,
+  onPickAttachment,
+  onPlanModeChange,
+  onRenameConversation,
+  onDraftChange,
+  onRemoveAttachment,
+  onSend,
+  onStopStreaming,
+  onCreatePermanentWorktree,
+}: BuilderChatScreenProps) {
+  const scrollToLatestRef = useRef<(() => void) | null>(null);
+
+  const handleSendRequest = useCallback(() => {
+    scrollToLatestRef.current?.();
+    onSend();
+  }, [onSend]);
+
+  return (
+    <motion.div
+      initial={false}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.14 }}
+      className="flex min-h-0 flex-1 flex-col bg-surface"
+    >
+      {isNewChat ? (
+        <BuilderNewChat promptSuggestions={promptSuggestions} workspaceLabel={conversationSubtitle} />
+      ) : (
+        <BuilderConversationView
+          activeConversationId={activeConversationId}
+          currentWorkspaceId={currentWorkspaceId}
+          currentWorkspacePath={currentWorkspacePath}
+          conversationSubtitle={conversationSubtitle}
+          conversationTitle={conversationTitle}
+          messages={messages}
+          onArchiveConversation={onArchiveConversation}
+          onCreatePermanentWorktree={onCreatePermanentWorktree}
+          onOpenWorkspaceInExplorer={onOpenWorkspaceInExplorer}
+          onRenameConversation={onRenameConversation}
+          registerScrollToLatest={(callback) => {
+            scrollToLatestRef.current = callback;
+          }}
+        />
+      )}
+
+      <BuilderComposer
+        composerSettings={composerSettings}
+        draft={draft}
+        isStreaming={isStreaming}
+        onDraftChange={onDraftChange}
+        onPermissionModeChange={onPermissionModeChange}
+        onPickAttachment={onPickAttachment}
+        onPlanModeChange={onPlanModeChange}
+        onRemoveAttachment={onRemoveAttachment}
+        onSend={handleSendRequest}
+        onStopStreaming={onStopStreaming}
+      />
+    </motion.div>
+  );
+}

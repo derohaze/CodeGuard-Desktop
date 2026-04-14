@@ -1,3 +1,2 @@
-export { BuilderSidebar } from "./ui/BuilderSidebar";
-export { BuilderChatScreen } from "./ui/BuilderChatScreen";
-export { useBuilderAgent } from "./model/useBuilderAgent";
+export { BuilderChatScreen, BuilderCommandMenu, BuilderSidebar } from "./ui";
+export { useBuilderAgent } from "./model";
