@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   archiveBuilderThread,
   archiveBuilderWorkspaceThreads,
@@ -28,6 +28,7 @@ export function useBuilderWorkspaceState() {
   const [expandedWorkspaceIds, setExpandedWorkspaceIds] = useState<string[]>([]);
   const [showAllWorkspaceIds, setShowAllWorkspaceIds] = useState<string[]>([]);
   const [sortMode, setSortMode] = useState<"recent" | "alphabetical">("recent");
+  const pendingConversationOpenRef = useRef<string | null>(null);
 
   const refreshWorkspaces = useCallback(async () => {
     const workspaces = await listBuilderWorkspaces();
@@ -98,20 +99,36 @@ export function useBuilderWorkspaceState() {
       setPreviousConversationId(activeConversationId);
     }
     const conversation = conversations.find((item) => item.id === conversationId);
-    setActiveConversationId(conversationId);
     if (conversation) {
       setCurrentWorkspaceId(conversation.groupId);
       setExpandedWorkspaceIds((current) => (current.includes(conversation.groupId) ? current : [...current, conversation.groupId]));
     }
-    if (!messageMap[conversationId]) {
-      try {
-        const detail = await getBuilderThread(conversationId);
-        setMessageMap((current) => ({
-          ...current,
-          [conversationId]: detail.messages.map(mapMessage),
-        }));
-      } catch (error) {
-        console.error("[CodeGuard Builder] Failed to open conversation", error);
+
+    if (messageMap[conversationId]) {
+      pendingConversationOpenRef.current = null;
+      setActiveConversationId(conversationId);
+      return;
+    }
+
+    pendingConversationOpenRef.current = conversationId;
+    try {
+      const detail = await getBuilderThread(conversationId);
+      if (pendingConversationOpenRef.current !== conversationId) {
+        return;
+      }
+      setMessageMap((current) => ({
+        ...current,
+        [conversationId]: detail.messages.map(mapMessage),
+      }));
+      setActiveConversationId(conversationId);
+    } catch (error) {
+      if (pendingConversationOpenRef.current === conversationId) {
+        setActiveConversationId(conversationId);
+      }
+      console.error("[CodeGuard Builder] Failed to open conversation", error);
+    } finally {
+      if (pendingConversationOpenRef.current === conversationId) {
+        pendingConversationOpenRef.current = null;
       }
     }
   }, [activeConversationId, conversations, messageMap]);
