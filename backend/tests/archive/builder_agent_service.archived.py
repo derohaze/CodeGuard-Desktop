@@ -9,8 +9,8 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.builder_agent.provider import BuilderProviderReply, BuilderProviderUsage
-from app.builder_agent.service import BuilderAgentService, _title_from_message
+from app.builder_archive.provider import BuilderProviderReply, BuilderProviderUsage
+from app.builder_archive.service import BuilderAgentService, _title_from_message
 
 
 class InMemoryBuilderRepository:

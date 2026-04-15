@@ -1,16 +1,10 @@
 import { PanelLeftClose } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { WorkspaceModeSwitch } from "@/shared/ui/WorkspaceModeSwitch";
-import type { WorkspaceMode } from "@/shared/types/app";
 import { BrandModeHeading } from "@/shared/ui/BrandModeHeading";
 
 export function SidebarHeader({
-  mode,
-  onModeChange,
   onToggleCollapse,
 }: {
-  mode: WorkspaceMode;
-  onModeChange: (mode: WorkspaceMode) => void;
   onToggleCollapse: () => void;
 }) {
   return (
@@ -18,9 +12,8 @@ export function SidebarHeader({
       <div className="relative">
         <div className="space-y-3 pr-8">
           <div className="flex items-center gap-2.5">
-            <BrandModeHeading mode={mode} />
+            <BrandModeHeading />
           </div>
-          <WorkspaceModeSwitch mode={mode} onChange={onModeChange} />
         </div>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>

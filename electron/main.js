@@ -7,7 +7,7 @@ const INITIAL_WINDOW_HEIGHT = 720;
 const MIN_WINDOW_WIDTH = 980;
 const MIN_WINDOW_HEIGHT = 640;
 
-app.setName('Khwarizm');
+app.setName('Aegix');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -25,7 +25,7 @@ function createWindow() {
       symbolColor: '#2a241e',
       height: 32
     },
-    title: 'Khwarizm',
+    title: 'Aegix',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -47,7 +47,7 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
-  mainWindow.setTitle('Khwarizm');
+  mainWindow.setTitle('Aegix');
   mainWindow.once('ready-to-show', () => {
     if (!mainWindow) return;
     if (mainWindow.isMaximized()) {

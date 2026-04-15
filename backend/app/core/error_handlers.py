@@ -4,17 +4,17 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.core.exceptions import KhwarizmError
+from app.core.exceptions import AegixError
 
 
-logger = logging.getLogger("khwarizm.api")
+logger = logging.getLogger("aegix.api")
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    @app.exception_handler(KhwarizmError)
-    async def handle_khwarizm_error(_: Request, exc: KhwarizmError):
+    @app.exception_handler(AegixError)
+    async def handle_aegix_error(_: Request, exc: AegixError):
         error_id = str(uuid4())
-        logger.warning("Handled Khwarizm error", extra={"error_id": error_id}, exc_info=exc)
+        logger.warning("Handled Aegix error", extra={"error_id": error_id}, exc_info=exc)
         return JSONResponse(
             status_code=400,
             content={

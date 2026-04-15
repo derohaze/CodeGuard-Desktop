@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/sonner";
 import { ApprovalQueueScreen } from "@/features/approval-queue";
-import { BuilderChatScreen, BuilderSidebar, useBuilderAgent } from "@/features/builder-agent";
 import { DecisionCenterScreen } from "@/features/decision-center";
 import { HomeScreen } from "@/features/dashboard";
 import { ExportPatchScreen } from "@/features/export-patch";
@@ -65,7 +64,7 @@ import {
 } from "@/shared/api/security";
 import { Loader } from "@/shared/ui/Loader";
 import { toAnalystCopy } from "@/shared/lib/analyst-copy";
-import type { AppScreen, AppView, WorkspaceMode } from "@/shared/types/app";
+import type { AppScreen, AppView } from "@/shared/types/app";
 import { AppShell } from "@/widgets/app-shell";
 import {
   resolveApprovalQueueFindingRoute,
@@ -99,7 +98,6 @@ type RemediationExecutionCache = Record<string, RemediationExecutionResult>;
 type PatchExportSnapshotCache = Record<string, PatchExportSnapshot>;
 
 export default function Page() {
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("security");
   const [screen, setScreen] = useState<AppScreen>("home");
   const [findingOriginScreen, setFindingOriginScreen] = useState<AppScreen | null>(null);
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
@@ -134,48 +132,6 @@ export default function Page() {
     isSaving: runtimeSettingsSaving,
     patchSettings: patchRuntimeSettings,
   } = useRuntimeSettings();
-  const {
-    activeConversation,
-    activeConversationId,
-    addAttachment,
-    addWorkspace,
-    archiveWorkspaceThreads,
-    archiveThread,
-    busyConversationIds,
-    collapseAllWorkspaces,
-    composerSettings,
-    contextUsage,
-    createPermanentWorktree,
-    createWorkspaceThread,
-    currentWorkspace,
-    draft,
-    expandedWorkspaceIds,
-    expandAllWorkspaces,
-    hasPreviousConversation,
-    prepareProgress,
-    isPreparingResponse,
-    isStreaming,
-    messages,
-    openConversation,
-    openWorkspaceInExplorer,
-    promptSuggestions,
-    removeWorkspace,
-    removeThread,
-    removeAttachment,
-    reorderWorkspaces,
-    renameWorkspace,
-    renameThread,
-    reopenPreviousConversation,
-    sendMessage,
-    setPermissionMode,
-    setPlanMode,
-    setDraft,
-    stopStreaming,
-    showAllWorkspaceIds,
-    threadGroups,
-    toggleWorkspace,
-    toggleWorkspaceShowAll,
-  } = useBuilderAgent();
 
   const mergeSessionSummary = useCallback((session: Session) => {
     setSessions((current) => {
@@ -234,7 +190,7 @@ export default function Page() {
       setSessions(nextSessions);
       syncSessionOrder(nextSessions);
     } catch (error) {
-      console.error("[Khwarizm] Failed to refresh sessions", error);
+      console.error("[Aegix] Failed to refresh sessions", error);
       setSessions([]);
       setSessionOrder([]);
     }
@@ -291,13 +247,13 @@ export default function Page() {
       if (summaryResult.status === "fulfilled") {
         setRepoIntelligenceSummary(summaryResult.value);
       } else {
-        console.error("[Khwarizm] Failed to load repo intelligence summary", summaryResult.reason);
+        console.error("[Aegix] Failed to load repo intelligence summary", summaryResult.reason);
         setRepoIntelligenceSummary(null);
       }
       if (feedResult.status === "fulfilled") {
         setRepoHotspotFeed(feedResult.value);
       } else {
-        console.error("[Khwarizm] Failed to load repo hotspot feed", feedResult.reason);
+        console.error("[Aegix] Failed to load repo hotspot feed", feedResult.reason);
         setRepoHotspotFeed(null);
       }
     });
@@ -322,13 +278,13 @@ export default function Page() {
       if (summaryResult.status === "fulfilled") {
         setTeamPostureSummary(summaryResult.value);
       } else {
-        console.error("[Khwarizm] Failed to load team posture summary", summaryResult.reason);
+        console.error("[Aegix] Failed to load team posture summary", summaryResult.reason);
         setTeamPostureSummary(null);
       }
       if (feedResult.status === "fulfilled") {
         setTeamPostureFeed(feedResult.value);
       } else {
-        console.error("[Khwarizm] Failed to load team posture feed", feedResult.reason);
+        console.error("[Aegix] Failed to load team posture feed", feedResult.reason);
         setTeamPostureFeed(null);
       }
     });
@@ -353,13 +309,13 @@ export default function Page() {
       if (summaryResult.status === "fulfilled") {
         setServiceExposureSummary(summaryResult.value);
       } else {
-        console.error("[Khwarizm] Failed to load service exposure summary", summaryResult.reason);
+        console.error("[Aegix] Failed to load service exposure summary", summaryResult.reason);
         setServiceExposureSummary(null);
       }
       if (feedResult.status === "fulfilled") {
         setServiceExposureFeed(feedResult.value);
       } else {
-        console.error("[Khwarizm] Failed to load service exposure feed", feedResult.reason);
+        console.error("[Aegix] Failed to load service exposure feed", feedResult.reason);
         setServiceExposureFeed(null);
       }
     });
@@ -477,7 +433,7 @@ export default function Page() {
       syncSessionOrder([detail.session, ...sessions.filter((item) => item.id !== detail.session.id)]);
       setScreen("scan-progress");
     } catch (error) {
-      console.error("[Khwarizm] Failed to start scan", error);
+      console.error("[Aegix] Failed to start scan", error);
       const message = error instanceof Error ? error.message : "Unable to start the scan.";
       toast.error(message);
     }
@@ -944,7 +900,7 @@ export default function Page() {
         }),
       );
     } catch (error) {
-      console.error("[Khwarizm] Failed to open scan session", error);
+      console.error("[Aegix] Failed to open scan session", error);
       const message = error instanceof Error ? toAnalystCopy(error.message) : "Unable to open the analyst session.";
       toast.error(message);
     }
@@ -992,7 +948,7 @@ export default function Page() {
         toast.success("All analyst sessions were deleted successfully.");
       }
     } catch (error) {
-      console.error("[Khwarizm] Failed to delete scan session", error);
+      console.error("[Aegix] Failed to delete scan session", error);
       const message = error instanceof Error ? toAnalystCopy(error.message) : "Unable to delete the analyst session.";
       toast.error(message);
     } finally {
@@ -1218,56 +1174,20 @@ export default function Page() {
     <AppShell>
       {view === "workspace" ? (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          {workspaceMode === "security" ? (
-            <Sidebar
-              sessions={sessions}
-              currentScreen={screen}
-              onNavigate={handleNavigate}
-              activeSessionId={activeSessionId}
-              onOpenSession={handleOpenSession}
-              onDeleteSession={handleDeleteSession}
-              onDeleteAllSessions={handleDeleteAllSessions}
-              onReorderSessions={handleReorderSessions}
-              sessionOrder={sessionOrder}
-              isCollapsed={isSidebarCollapsed}
-              mode={workspaceMode}
-              onModeChange={setWorkspaceMode}
-              onToggleCollapse={() => setIsSidebarCollapsed((current) => !current)}
-              onOpenSettings={() => setView("settings")}
-            />
-          ) : (
-            <BuilderSidebar
-              activeConversationId={activeConversationId}
-              currentWorkspaceId={currentWorkspace?.id ?? null}
-              expandedWorkspaceIds={expandedWorkspaceIds}
-              isCollapsed={isSidebarCollapsed}
-              onAddWorkspace={addWorkspace}
-              onArchiveThread={archiveThread}
-              onArchiveWorkspaceThreads={archiveWorkspaceThreads}
-              onCollapseAllWorkspaces={collapseAllWorkspaces}
-              onCreatePermanentWorktree={createPermanentWorktree}
-              onCreateWorkspaceThread={createWorkspaceThread}
-              onExpandAllWorkspaces={expandAllWorkspaces}
-              onOpenConversation={openConversation}
-              onOpenSettings={() => setView("settings")}
-              onOpenWorkspaceInExplorer={openWorkspaceInExplorer}
-              onRemoveWorkspace={removeWorkspace}
-              onRemoveThread={removeThread}
-              onReorderWorkspaces={reorderWorkspaces}
-              onRenameWorkspace={renameWorkspace}
-              onRenameThread={renameThread}
-              onReopenPreviousConversation={reopenPreviousConversation}
-              onToggleCollapse={() => setIsSidebarCollapsed((current) => !current)}
-              onToggleWorkspace={toggleWorkspace}
-              onToggleWorkspaceShowAll={toggleWorkspaceShowAll}
-              onWorkspaceModeChange={setWorkspaceMode}
-              busyConversationIds={busyConversationIds}
-              hasPreviousConversation={hasPreviousConversation}
-              showAllWorkspaceIds={showAllWorkspaceIds}
-              threadGroups={threadGroups}
-              workspaceMode={workspaceMode}
-            />
-          )}
+          <Sidebar
+            sessions={sessions}
+            currentScreen={screen}
+            onNavigate={handleNavigate}
+            activeSessionId={activeSessionId}
+            onOpenSession={handleOpenSession}
+            onDeleteSession={handleDeleteSession}
+            onDeleteAllSessions={handleDeleteAllSessions}
+            onReorderSessions={handleReorderSessions}
+            sessionOrder={sessionOrder}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed((current) => !current)}
+            onOpenSettings={() => setView("settings")}
+          />
           <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden pt-8">
             {isSidebarCollapsed && (
               <Tooltip delayDuration={0}>
@@ -1291,41 +1211,7 @@ export default function Page() {
                 </TooltipContent>
               </Tooltip>
             )}
-            {workspaceMode === "security" ? (
-              <div className="flex min-h-0 min-w-0 flex-1">
-                  {renderContent()}
-              </div>
-            ) : (
-              <div className="flex min-h-0 min-w-0 flex-1">
-                  <BuilderChatScreen
-                    activeConversationId={activeConversationId}
-                    composerSettings={composerSettings}
-                    contextUsage={contextUsage}
-                    currentWorkspaceId={currentWorkspace?.id ?? null}
-                    currentWorkspacePath={currentWorkspace?.path ?? null}
-                    conversationTitle={activeConversation?.title ?? "New chat"}
-                    conversationSubtitle={activeConversation?.subtitle ?? (currentWorkspace?.label ?? "Choose a workspace")}
-                    draft={draft}
-                    isNewChat={activeConversationId === null}
-                    prepareProgress={prepareProgress}
-                    isPreparingResponse={isPreparingResponse}
-                    isStreaming={isStreaming}
-                    messages={messages}
-                    promptSuggestions={promptSuggestions}
-                    onArchiveConversation={archiveThread}
-                    onOpenWorkspaceInExplorer={openWorkspaceInExplorer}
-                    onPermissionModeChange={setPermissionMode}
-                    onPickAttachment={addAttachment}
-                    onPlanModeChange={setPlanMode}
-                    onRenameConversation={renameThread}
-                    onDraftChange={setDraft}
-                    onRemoveAttachment={removeAttachment}
-                    onSend={sendMessage}
-                    onStopStreaming={stopStreaming}
-                    onCreatePermanentWorktree={createPermanentWorktree}
-                  />
-              </div>
-            )}
+            <div className="flex min-h-0 min-w-0 flex-1">{renderContent()}</div>
           </div>
         </div>
       ) : (

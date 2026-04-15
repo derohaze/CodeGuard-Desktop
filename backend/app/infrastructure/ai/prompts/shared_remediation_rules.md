@@ -1,4 +1,4 @@
-Shared remediation policy for Khwarizm:
+Shared remediation policy for Aegix:
 
 - Prefer complete sink-level or service-layer fixes over router-only filtering.
 - Distinguish clearly between:

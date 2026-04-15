@@ -60,8 +60,8 @@ def build_network_policy_note() -> str:
 def sanitize_runtime_error(exc: Exception, *, operation: str) -> str:
     if isinstance(exc, ExternalAIServiceError):
         if operation == "scan":
-            return "Khwarizm could not complete the scan because the configured AI runtime was temporarily unavailable. Retry shortly."
+            return "Aegix could not complete the scan because the configured AI runtime was temporarily unavailable. Retry shortly."
         if operation == "remediation":
-            return "Khwarizm could not complete remediation analysis because the AI runtime was temporarily unavailable. Retry shortly."
-        return "Khwarizm could not complete the requested AI operation because the runtime was temporarily unavailable. Retry shortly."
-    return "Khwarizm could not complete the requested operation. Retry shortly."
+            return "Aegix could not complete remediation analysis because the AI runtime was temporarily unavailable. Retry shortly."
+        return "Aegix could not complete the requested AI operation because the runtime was temporarily unavailable. Retry shortly."
+    return "Aegix could not complete the requested operation. Retry shortly."

@@ -390,7 +390,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
     });
   } catch (error) {
-    console.error("[Khwarizm] Network request failed", {
+    console.error("[Aegix] Network request failed", {
       path,
       method: init?.method ?? "GET",
       error,
@@ -407,7 +407,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       body = null;
     }
 
-    console.error("[Khwarizm] API request failed", {
+    console.error("[Aegix] API request failed", {
       path,
       method: init?.method ?? "GET",
       status: response.status,

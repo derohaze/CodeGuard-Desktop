@@ -1,4 +1,4 @@
-Shared security scan rules for Khwarizm:
+Shared security scan rules for Aegix:
 
 - Stay evidence-grounded. Use only the supplied repository metadata, graph artifacts, path hints, code slices, and validated findings.
 - Never invent files, routes, imports, services, request fields, variables, sanitizers, or sinks that are not present in the provided input.

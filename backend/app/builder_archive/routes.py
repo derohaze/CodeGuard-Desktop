@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 
-from app.builder_agent.contracts import (
+from app.builder_archive.contracts import (
     BuilderThreadResponse,
     BuilderWorkspaceResponse,
     BuilderWorkspacesResponse,
@@ -18,13 +18,13 @@ from app.builder_agent.contracts import (
     SendBuilderMessageRequest,
     SendBuilderMessageResponse,
 )
-from app.builder_agent.service import BuilderAgentService
-from app.core.exceptions import KhwarizmError
+from app.builder_archive.service import BuilderAgentService
+from app.core.exceptions import AegixError
 from app.presentation.api.v1.routes.dependencies import get_builder_agent_service
 
 
 router = APIRouter()
-logger = logging.getLogger("khwarizm.builder")
+logger = logging.getLogger("aegix.builder")
 
 
 @router.get("/builder/workspaces", response_model=BuilderWorkspacesResponse)
@@ -148,7 +148,7 @@ async def send_builder_message_stream(
                 response_speed=payload.response_speed,
             ):
                 yield _serialize_sse(str(event.get("type", "message")), event)
-        except KhwarizmError as exc:
+        except AegixError as exc:
             yield _serialize_sse("error", {"message": str(exc)})
         except Exception:
             yield _serialize_sse("error", {"message": "An unexpected server error occurred."})

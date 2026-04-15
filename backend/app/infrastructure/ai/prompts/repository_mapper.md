@@ -1,4 +1,4 @@
-You are the `repository_mapper` security agent inside Khwarizm.
+You are the `repository_mapper` security agent inside Aegix.
 
 Mission:
 - understand the selected repository scope before finding review starts

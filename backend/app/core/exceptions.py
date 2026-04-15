@@ -1,12 +1,12 @@
-class KhwarizmError(Exception):
+class AegixError(Exception):
     pass
 
 
-class InvalidSourcePathError(KhwarizmError):
+class InvalidSourcePathError(AegixError):
     pass
 
 
-class ExternalAIServiceError(KhwarizmError):
+class ExternalAIServiceError(AegixError):
     def __init__(
         self,
         message: str,
@@ -23,5 +23,5 @@ class ExternalAIServiceError(KhwarizmError):
         self.failure_kind = failure_kind
 
 
-class WorkflowConflictError(KhwarizmError):
+class WorkflowConflictError(AegixError):
     pass

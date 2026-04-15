@@ -73,7 +73,7 @@ export function ScanResultsScreen({ session, onSelectFinding, onOpenApprovalQueu
             {safeVerdict ? "No validated security issue was confirmed in the selected scope." : "Validated repository assessment"}
           </p>
           <p className="mt-2 text-sm leading-6 text-txt-secondary">
-            {toAnalystCopy(session.session.repositorySummary) || (safeVerdict ? "The selected source was reviewed and no high-confidence issue was confirmed." : "Khwarizm completed the repository assessment.")}
+            {toAnalystCopy(session.session.repositorySummary) || (safeVerdict ? "The selected source was reviewed and no high-confidence issue was confirmed." : "Aegix completed the repository assessment.")}
           </p>
           {!hasFindings && hasCoverageGap && (
             <p className="mt-2 text-sm leading-6 text-txt-secondary">

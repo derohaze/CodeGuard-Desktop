@@ -25,7 +25,7 @@ from app.infrastructure.learning.common.schemas import ExternalKnowledgeSourceSp
 from app.infrastructure.settings.runtime_settings_service import RuntimeSettingsService
 
 
-logger = logging.getLogger("khwarizm.learning.ingestion")
+logger = logging.getLogger("aegix.learning.ingestion")
 
 
 @dataclass(slots=True)

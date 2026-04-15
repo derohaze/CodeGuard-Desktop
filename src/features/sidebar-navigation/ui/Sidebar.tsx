@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import type { Session } from "@/entities/session/model/types";
-import type { AppScreen, WorkspaceMode } from "@/shared/types/app";
+import type { AppScreen } from "@/shared/types/app";
 import { SidebarActions } from "./SidebarActions";
 import { SidebarFooter } from "./SidebarFooter";
 import { SidebarHeader } from "./SidebarHeader";
@@ -17,8 +17,6 @@ interface SidebarProps {
   onDeleteAllSessions: () => void;
   onReorderSessions: (orderedSessionIds: string[]) => void;
   isCollapsed: boolean;
-  mode: WorkspaceMode;
-  onModeChange: (mode: WorkspaceMode) => void;
   onToggleCollapse: () => void;
   onOpenSettings: () => void;
 }
@@ -34,8 +32,6 @@ export function Sidebar({
   onDeleteAllSessions,
   onReorderSessions,
   isCollapsed,
-  mode,
-  onModeChange,
   onToggleCollapse,
   onOpenSettings,
 }: SidebarProps) {
@@ -55,7 +51,7 @@ export function Sidebar({
         }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       >
-        <SidebarHeader mode={mode} onModeChange={onModeChange} onToggleCollapse={onToggleCollapse} />
+        <SidebarHeader onToggleCollapse={onToggleCollapse} />
         <SidebarActions currentScreen={currentScreen} onNavigate={onNavigate} />
         <SidebarSessionsList
           sessions={sessions}

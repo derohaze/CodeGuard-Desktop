@@ -247,7 +247,7 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
             ) from exc
         except httpx.ConnectError as exc:
             raise ExternalAIServiceError(
-                "Khwarizm could not reach NVIDIA. Check network access and retry.",
+                "Aegix could not reach NVIDIA. Check network access and retry.",
                 provider="nvidia",
                 retryable=True,
                 failure_kind="connection",
