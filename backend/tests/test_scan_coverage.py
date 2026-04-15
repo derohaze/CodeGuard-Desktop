@@ -7,8 +7,8 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.domain.entities.scan import FindingEntity
-from app.infrastructure.services.repository_analysis import build_repository_artifacts, build_repository_profile, collect_files
-from app.infrastructure.services.scan_coverage import (
+from app.infrastructure.services.repository.repository_analysis import build_repository_artifacts, build_repository_profile, collect_files
+from app.infrastructure.services.scan.scan_coverage import (
     build_coverage_snapshot,
     build_file_segments,
     build_segment_work_items,

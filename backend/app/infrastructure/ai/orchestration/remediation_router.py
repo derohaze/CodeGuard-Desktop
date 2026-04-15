@@ -9,7 +9,7 @@ from app.infrastructure.ai.orchestration.agent_policy_engine import AgentPolicyE
 from app.infrastructure.ai.orchestration.agent_task_profiles import AgentTaskProfile, build_task_profiles
 from app.infrastructure.ai.orchestration.context_compaction import compact_agent_payload
 from app.infrastructure.ai.orchestration.model_router import ModelRouter
-from app.infrastructure.services.exploit_examples import enrich_explanation_examples
+from app.infrastructure.services.remediation.exploit_examples import enrich_explanation_examples
 
 
 @dataclass(slots=True)

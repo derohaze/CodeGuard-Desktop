@@ -9,7 +9,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.core.exceptions import ExternalAIServiceError
-from app.infrastructure.services.scan_execution_service import ScanExecutionService, create_initial_session
+from app.infrastructure.services.scan.scan_execution_service import ScanExecutionService, create_initial_session
 
 
 class FakeRepository:

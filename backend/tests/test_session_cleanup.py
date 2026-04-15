@@ -8,8 +8,8 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.application.use_cases.delete_all_sessions import DeleteAllSessionsUseCase
-from app.application.use_cases.delete_session import DeleteSessionUseCase
+from app.application.use_cases.session.delete_all_sessions import DeleteAllSessionsUseCase
+from app.application.use_cases.session.delete_session import DeleteSessionUseCase
 
 
 class FakeSessionRepository:

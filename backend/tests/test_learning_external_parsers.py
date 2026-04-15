@@ -6,7 +6,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.learning.external_parsers import parse_external_payload_with_parser
+from app.infrastructure.learning.ingestion.external_parsers import parse_external_payload_with_parser
 
 
 class LearningExternalParsersTests(unittest.TestCase):

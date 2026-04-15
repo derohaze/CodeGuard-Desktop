@@ -12,17 +12,17 @@ from app.application.dto.remediation_contracts import (
     RollbackFixRequest,
     RetryFixStrategyRequest,
 )
-from app.application.use_cases.apply_fix import ApplyFixUseCase
-from app.application.use_cases.explain_finding import ExplainFindingUseCase
-from app.application.use_cases.generate_batch_remediation import GenerateBatchRemediationUseCase
-from app.application.use_cases.generate_fix import (
+from app.application.use_cases.remediation.apply_fix import ApplyFixUseCase
+from app.application.use_cases.remediation.explain_finding import ExplainFindingUseCase
+from app.application.use_cases.remediation.generate_batch_remediation import GenerateBatchRemediationUseCase
+from app.application.use_cases.remediation.generate_fix import (
     GenerateFixUseCase,
     remediation_plan_failure_reason,
     remediation_plan_is_usable,
 )
-from app.application.use_cases.reject_fix import RejectFixUseCase
-from app.application.use_cases.rollback_fix import RollbackFixUseCase
-from app.application.use_cases.retry_fix_strategy import RetryFixStrategyUseCase
+from app.application.use_cases.remediation.reject_fix import RejectFixUseCase
+from app.application.use_cases.remediation.rollback_fix import RollbackFixUseCase
+from app.application.use_cases.remediation.retry_fix_strategy import RetryFixStrategyUseCase
 from app.core.exceptions import ExternalAIServiceError
 from app.core.exceptions import WorkflowConflictError
 from app.presentation.api.v1.routes.dependencies import (

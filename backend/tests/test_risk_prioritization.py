@@ -7,7 +7,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.services.risk_prioritization import prioritize_review_queue
+from app.infrastructure.services.scan.risk_prioritization import prioritize_review_queue
 
 
 class RiskPrioritizationTests(unittest.TestCase):

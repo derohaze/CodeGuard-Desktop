@@ -14,12 +14,12 @@ from app.application.dto.learning_contracts import (
     FeedbackEventRequest,
     FeedbackEventResponse,
 )
-from app.application.use_cases.archive_learning_session import ArchiveLearningSessionUseCase
-from app.application.use_cases.ingest_external_knowledge import IngestExternalKnowledgeUseCase
-from app.application.use_cases.record_feedback_event import RecordFeedbackEventUseCase
-from app.application.use_cases.run_learning_benchmarks import RunLearningBenchmarksUseCase
-from app.application.use_cases.search_external_knowledge import SearchExternalKnowledgeUseCase
-from app.infrastructure.learning.schemas import ExternalKnowledgeSearchQuery, ExternalKnowledgeSourceSpec
+from app.application.use_cases.learning.archive_learning_session import ArchiveLearningSessionUseCase
+from app.application.use_cases.learning.ingest_external_knowledge import IngestExternalKnowledgeUseCase
+from app.application.use_cases.learning.record_feedback_event import RecordFeedbackEventUseCase
+from app.application.use_cases.learning.run_learning_benchmarks import RunLearningBenchmarksUseCase
+from app.application.use_cases.learning.search_external_knowledge import SearchExternalKnowledgeUseCase
+from app.infrastructure.learning.common.schemas import ExternalKnowledgeSearchQuery, ExternalKnowledgeSourceSpec
 from app.presentation.api.v1.routes.dependencies import (
     get_archive_learning_session_use_case,
     get_ingest_external_knowledge_use_case,

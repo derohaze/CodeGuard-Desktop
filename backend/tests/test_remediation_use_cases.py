@@ -10,12 +10,12 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.application.dto.remediation_contracts import ExplainFindingRequest, GenerateFixRequest
 from app.application.dto.remediation_contracts import ApplyFixRequest, GenerateBatchRemediationRequest, RejectFixRequest, RetryFixStrategyRequest
-from app.application.use_cases.apply_fix import ApplyFixUseCase
-from app.application.use_cases.explain_finding import ExplainFindingUseCase
-from app.application.use_cases.generate_batch_remediation import GenerateBatchRemediationUseCase
-from app.application.use_cases.generate_fix import GenerateFixUseCase
-from app.application.use_cases.reject_fix import RejectFixUseCase
-from app.application.use_cases.retry_fix_strategy import RetryFixStrategyUseCase
+from app.application.use_cases.remediation.apply_fix import ApplyFixUseCase
+from app.application.use_cases.remediation.explain_finding import ExplainFindingUseCase
+from app.application.use_cases.remediation.generate_batch_remediation import GenerateBatchRemediationUseCase
+from app.application.use_cases.remediation.generate_fix import GenerateFixUseCase
+from app.application.use_cases.remediation.reject_fix import RejectFixUseCase
+from app.application.use_cases.remediation.retry_fix_strategy import RetryFixStrategyUseCase
 from app.domain.entities.scan import FindingEntity, ScanSessionEntity
 from app.core.exceptions import WorkflowConflictError
 
@@ -405,7 +405,7 @@ class RemediationUseCaseTests(unittest.TestCase):
         assert apply_response is not None
         checkpoint_id = apply_response.action.checkpoint_id
         from app.application.dto.remediation_contracts import RollbackFixRequest
-        from app.application.use_cases.rollback_fix import RollbackFixUseCase
+        from app.application.use_cases.remediation.rollback_fix import RollbackFixUseCase
 
         rollback_use_case = RollbackFixUseCase(self.repository)
         rollback_response = asyncio.run(rollback_use_case.execute(

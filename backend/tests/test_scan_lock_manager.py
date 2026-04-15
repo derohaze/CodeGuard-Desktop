@@ -8,7 +8,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.services.scan_lock_manager import ScanLockManager
+from app.infrastructure.services.scan.scan_lock_manager import ScanLockManager
 
 
 class ScanLockManagerTests(unittest.TestCase):
@@ -23,7 +23,7 @@ class ScanLockManagerTests(unittest.TestCase):
                 "source_scan_lock_ttl_seconds": 60,
             },
         )()
-        with patch("app.infrastructure.services.scan_lock_manager.get_settings", return_value=settings):
+        with patch("app.infrastructure.services.scan.scan_lock_manager.get_settings", return_value=settings):
             manager = ScanLockManager()
             first = asyncio.run(
                 manager.acquire_submission_locks(session_id="session-1", source_fingerprint="source-1")

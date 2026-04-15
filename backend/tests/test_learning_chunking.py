@@ -6,7 +6,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.learning.chunking import (
+from app.infrastructure.learning.storage.chunking import (
     MAX_MONGO_DOCUMENT_BYTES,
     ChunkPolicy,
     build_chunk_documents,

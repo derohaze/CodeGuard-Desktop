@@ -8,11 +8,11 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.services.framework_detection import detect_framework_profile
-from app.infrastructure.services.path_tracing import trace_candidate_paths
-from app.infrastructure.services.repository_analysis import build_repository_profile, run_precise_heuristics
-from app.infrastructure.services.repository_graph import build_repository_graph
-from app.infrastructure.services.source_sink_registry import build_source_sink_registry
+from app.infrastructure.services.repository.framework_detection import detect_framework_profile
+from app.infrastructure.services.repository.path_tracing import trace_candidate_paths
+from app.infrastructure.services.repository.repository_analysis import build_repository_profile, run_precise_heuristics
+from app.infrastructure.services.repository.repository_graph import build_repository_graph
+from app.infrastructure.services.repository.source_sink_registry import build_source_sink_registry
 
 
 class NodeGoatIntelligenceTests(unittest.TestCase):

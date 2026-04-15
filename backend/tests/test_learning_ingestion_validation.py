@@ -6,11 +6,11 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.learning.ingestion_validation import (
+from app.infrastructure.learning.ingestion.ingestion_validation import (
     sanitize_external_item,
     validate_external_source_spec,
 )
-from app.infrastructure.learning.schemas import ExternalKnowledgeSourceSpec
+from app.infrastructure.learning.common.schemas import ExternalKnowledgeSourceSpec
 
 
 class LearningIngestionValidationTests(unittest.TestCase):

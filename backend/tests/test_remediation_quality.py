@@ -7,7 +7,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.domain.entities.remediation import FixStrategyEntity, PatchCandidateEntity
-from app.infrastructure.services.remediation_quality import assess_remediation_quality
+from app.infrastructure.services.remediation.remediation_quality import assess_remediation_quality
 
 
 class RemediationQualityTests(unittest.TestCase):

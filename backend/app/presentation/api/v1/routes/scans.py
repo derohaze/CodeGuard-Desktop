@@ -6,10 +6,10 @@ from fastapi.responses import StreamingResponse
 
 from app.application.dto.scan_contracts import ScanJobResponse, ScanSessionDetailResponse, StartScanRequest
 from app.application.ports.scan_job_dispatcher import ScanJobDispatcher
-from app.application.use_cases.scan_mapper import map_session_detail
-from app.application.use_cases.get_scan_job import GetScanJobUseCase
-from app.application.use_cases.get_session import GetSessionUseCase
-from app.application.use_cases.start_scan import StartScanUseCase
+from app.application.use_cases.scan.scan_mapper import map_session_detail
+from app.application.use_cases.scan.get_scan_job import GetScanJobUseCase
+from app.application.use_cases.session.get_session import GetSessionUseCase
+from app.application.use_cases.scan.start_scan import StartScanUseCase
 from app.core.exceptions import InvalidSourcePathError, WorkflowConflictError
 from app.presentation.api.v1.routes.dependencies import (
     get_scan_job_dispatcher,

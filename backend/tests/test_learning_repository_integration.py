@@ -12,7 +12,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.core.config import get_settings
-from app.infrastructure.learning.repository import LearningArchiveMongoRepository
+from app.infrastructure.learning.storage.repository import LearningArchiveMongoRepository
 
 
 class LearningRepositoryIntegrationTests(unittest.TestCase):
@@ -36,7 +36,7 @@ class LearningRepositoryIntegrationTests(unittest.TestCase):
             except Exception as exc:
                 raise unittest.SkipTest(f"Mongo integration test skipped: {exc}") from exc
 
-            with patch("app.infrastructure.learning.repository.get_database", return_value=database):
+            with patch("app.infrastructure.learning.storage.repository.get_database", return_value=database):
                 repository = LearningArchiveMongoRepository()
 
                 item = {

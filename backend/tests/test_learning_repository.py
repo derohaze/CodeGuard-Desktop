@@ -23,7 +23,7 @@ from app.infrastructure.database.collections import (
     LEARNING_ARCHIVE_RUNS_COLLECTION,
     NORMALIZATION_FAILURES_COLLECTION,
 )
-from app.infrastructure.learning.repository import LearningArchiveMongoRepository
+from app.infrastructure.learning.storage.repository import LearningArchiveMongoRepository
 
 
 def _build_database_mock() -> dict:
@@ -52,7 +52,7 @@ def _build_database_mock() -> dict:
 class LearningRepositoryTests(unittest.TestCase):
     def test_upsert_benchmark_case_does_not_duplicate_case_id_in_update_document(self):
         database = _build_database_mock()
-        with patch("app.infrastructure.learning.repository.get_database", return_value=database):
+        with patch("app.infrastructure.learning.storage.repository.get_database", return_value=database):
             repository = LearningArchiveMongoRepository()
             asyncio.run(
                 repository.upsert_benchmark_case(
@@ -71,7 +71,7 @@ class LearningRepositoryTests(unittest.TestCase):
 
     def test_record_feedback_event_does_not_duplicate_event_fields_in_update_document(self):
         database = _build_database_mock()
-        with patch("app.infrastructure.learning.repository.get_database", return_value=database):
+        with patch("app.infrastructure.learning.storage.repository.get_database", return_value=database):
             repository = LearningArchiveMongoRepository()
             asyncio.run(
                 repository.record_feedback_event(

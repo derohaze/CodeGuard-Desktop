@@ -9,7 +9,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.application.dto.scan_contracts import StartScanRequest
-from app.application.use_cases.start_scan import StartScanUseCase
+from app.application.use_cases.scan.start_scan import StartScanUseCase
 from app.core.exceptions import WorkflowConflictError
 
 

@@ -8,13 +8,13 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.domain.entities.scan import FindingEntity, ScanSessionEntity
-from app.infrastructure.learning.normalization import (
+from app.infrastructure.learning.common.normalization import (
     normalize_external_item,
     normalize_internal_finding,
     normalize_patch_record,
     normalize_status,
 )
-from app.infrastructure.learning.schemas import ExternalKnowledgeSourceSpec
+from app.infrastructure.learning.common.schemas import ExternalKnowledgeSourceSpec
 
 
 class LearningNormalizationTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 from app.application.ports.scan_job_dispatcher import ScanJobDispatcher
 from app.infrastructure.queue.redis import get_arq_pool
-from app.infrastructure.services.scan_execution_service import ScanExecutionService
+from app.infrastructure.services.scan.scan_execution_service import ScanExecutionService
 
 
 class InProcessScanJobDispatcher(ScanJobDispatcher):

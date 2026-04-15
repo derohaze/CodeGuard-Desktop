@@ -7,7 +7,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.learning.benchmark import LearningBenchmarkService
+from app.infrastructure.learning.benchmark.benchmark import LearningBenchmarkService
 
 
 class FakeLearningRepository:

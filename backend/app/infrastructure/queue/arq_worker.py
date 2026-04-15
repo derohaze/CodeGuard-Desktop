@@ -6,9 +6,9 @@ from app.infrastructure.ai.provider_factory import build_ai_client
 from app.infrastructure.database.mongo import close_mongo, initialize_mongo
 from app.infrastructure.repositories.mongo_scan_job_repository import MongoScanJobRepository
 from app.infrastructure.repositories.mongo_scan_repository import MongoScanSessionRepository
-from app.infrastructure.services.scan_lock_manager import ScanLockManager
-from app.infrastructure.services.scan_execution_service import ScanExecutionService
-from app.infrastructure.services.workflow_persistence import WorkflowPersistenceService
+from app.infrastructure.services.scan.scan_lock_manager import ScanLockManager
+from app.infrastructure.services.scan.scan_execution_service import ScanExecutionService
+from app.infrastructure.services.workflow.workflow_persistence import WorkflowPersistenceService
 from app.infrastructure.repositories.mongo_audit_event_repository import MongoAuditEventRepository
 from app.infrastructure.repositories.mongo_verification_run_repository import MongoVerificationRunRepository
 

@@ -7,12 +7,12 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.application.use_cases.get_workflow_repo_hotspots import GetWorkflowRepoHotspotsUseCase
-from app.application.use_cases.get_workflow_repo_intelligence_summary import GetWorkflowRepoIntelligenceSummaryUseCase
-from app.application.use_cases.get_workflow_service_exposure_feed import GetWorkflowServiceExposureFeedUseCase
-from app.application.use_cases.get_workflow_service_exposure_summary import GetWorkflowServiceExposureSummaryUseCase
-from app.application.use_cases.get_workflow_team_posture_feed import GetWorkflowTeamPostureFeedUseCase
-from app.application.use_cases.get_workflow_team_posture_summary import GetWorkflowTeamPostureSummaryUseCase
+from app.application.use_cases.workflow.get_workflow_repo_hotspots import GetWorkflowRepoHotspotsUseCase
+from app.application.use_cases.workflow.get_workflow_repo_intelligence_summary import GetWorkflowRepoIntelligenceSummaryUseCase
+from app.application.use_cases.workflow.get_workflow_service_exposure_feed import GetWorkflowServiceExposureFeedUseCase
+from app.application.use_cases.workflow.get_workflow_service_exposure_summary import GetWorkflowServiceExposureSummaryUseCase
+from app.application.use_cases.workflow.get_workflow_team_posture_feed import GetWorkflowTeamPostureFeedUseCase
+from app.application.use_cases.workflow.get_workflow_team_posture_summary import GetWorkflowTeamPostureSummaryUseCase
 from app.domain.entities.scan import FindingEntity, ScanSessionEntity
 
 

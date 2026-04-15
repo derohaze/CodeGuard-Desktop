@@ -11,7 +11,7 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.domain.entities.scan import FindingEntity, ScanSessionEntity
 from app.domain.entities.scan_job import ScanJobEntity
-from app.infrastructure.learning.archive import SecurityLearningArchiveService
+from app.infrastructure.learning.archive.archive import SecurityLearningArchiveService
 
 
 class AsyncCursor:
@@ -135,7 +135,7 @@ class LearningArchiveTests(unittest.TestCase):
         ]
         learning_repo = FakeLearningRepository()
         fake_db = {"audit_events": FakeCollection([]), "verification_runs": FakeCollection([])}
-        with patch("app.infrastructure.learning.archive.get_database", return_value=fake_db):
+        with patch("app.infrastructure.learning.archive.archive.get_database", return_value=fake_db):
             service = SecurityLearningArchiveService(
                 session_repository=FakeSessionRepository(session),
                 scan_job_repository=FakeJobRepository(jobs),
@@ -151,4 +151,3 @@ class LearningArchiveTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

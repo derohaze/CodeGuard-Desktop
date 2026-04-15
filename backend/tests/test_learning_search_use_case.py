@@ -7,8 +7,8 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.application.use_cases.search_external_knowledge import SearchExternalKnowledgeUseCase
-from app.infrastructure.learning.schemas import ExternalKnowledgeSearchQuery
+from app.application.use_cases.learning.search_external_knowledge import SearchExternalKnowledgeUseCase
+from app.infrastructure.learning.common.schemas import ExternalKnowledgeSearchQuery
 
 
 class FakeLearningRepository:

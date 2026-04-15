@@ -6,7 +6,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.services.score_calibration import build_support_matrix
+from app.infrastructure.services.scan.score_calibration import build_support_matrix
 
 
 class FrameworkSupportTests(unittest.TestCase):

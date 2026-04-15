@@ -9,15 +9,15 @@ from app.application.dto.scan_contracts import (
     WorkflowTeamPostureFeedResponse,
     WorkflowTeamPostureSummaryResponse,
 )
-from app.application.use_cases.delete_all_sessions import DeleteAllSessionsUseCase
-from app.application.use_cases.delete_session import DeleteSessionUseCase
-from app.application.use_cases.get_workflow_repo_hotspots import GetWorkflowRepoHotspotsUseCase
-from app.application.use_cases.get_workflow_repo_intelligence_summary import GetWorkflowRepoIntelligenceSummaryUseCase
-from app.application.use_cases.get_workflow_service_exposure_feed import GetWorkflowServiceExposureFeedUseCase
-from app.application.use_cases.get_workflow_service_exposure_summary import GetWorkflowServiceExposureSummaryUseCase
-from app.application.use_cases.get_workflow_team_posture_feed import GetWorkflowTeamPostureFeedUseCase
-from app.application.use_cases.get_workflow_team_posture_summary import GetWorkflowTeamPostureSummaryUseCase
-from app.application.use_cases.list_sessions import ListSessionsUseCase
+from app.application.use_cases.session.delete_all_sessions import DeleteAllSessionsUseCase
+from app.application.use_cases.session.delete_session import DeleteSessionUseCase
+from app.application.use_cases.workflow.get_workflow_repo_hotspots import GetWorkflowRepoHotspotsUseCase
+from app.application.use_cases.workflow.get_workflow_repo_intelligence_summary import GetWorkflowRepoIntelligenceSummaryUseCase
+from app.application.use_cases.workflow.get_workflow_service_exposure_feed import GetWorkflowServiceExposureFeedUseCase
+from app.application.use_cases.workflow.get_workflow_service_exposure_summary import GetWorkflowServiceExposureSummaryUseCase
+from app.application.use_cases.workflow.get_workflow_team_posture_feed import GetWorkflowTeamPostureFeedUseCase
+from app.application.use_cases.workflow.get_workflow_team_posture_summary import GetWorkflowTeamPostureSummaryUseCase
+from app.application.use_cases.session.list_sessions import ListSessionsUseCase
 from app.presentation.api.v1.routes.dependencies import (
     get_delete_all_sessions_use_case,
     get_delete_session_use_case,

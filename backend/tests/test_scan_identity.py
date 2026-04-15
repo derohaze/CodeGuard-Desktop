@@ -9,7 +9,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.services.scan_identity import (
+from app.infrastructure.services.scan.scan_identity import (
     build_analysis_cache_key,
     build_repository_snapshot_fingerprint,
     build_source_fingerprint,

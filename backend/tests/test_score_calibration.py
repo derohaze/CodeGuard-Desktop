@@ -8,7 +8,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.domain.entities.scan import FindingEntity
-from app.infrastructure.services.score_calibration import calibrate_security_score
+from app.infrastructure.services.scan.score_calibration import calibrate_security_score
 
 
 def make_finding(severity: str, confidence: int = 90) -> FindingEntity:

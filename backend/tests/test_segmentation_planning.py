@@ -8,7 +8,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.infrastructure.services.segmentation_planning import build_scan_work_units
+from app.infrastructure.services.scan.segmentation_planning import build_scan_work_units
 
 
 def _block(file_path: str, index: int, *, focus: str) -> dict:
