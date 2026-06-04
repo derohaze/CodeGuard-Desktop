@@ -1,6 +1,6 @@
 ---
 name: service-orchestrator
-description: Service lifecycle management — start, stop, check, and monitor backend (FastAPI+Node gateway) and frontend (Vite) services. Load this skill when you need to bring up the target application or manage running services during testing.
+description: Service lifecycle management for backend Python API, Node I/O, Rust indexer, and frontend Vite services. Load this skill when you need to bring up the target application or manage running services during testing.
 allowed-tools:
   - shell
   - http
@@ -8,15 +8,16 @@ allowed-tools:
   - web_fetch
 ---
 
-# Service orchestrator — lifecycle playbook
+# Service orchestrator lifecycle playbook
 
-Use this skill to start, verify, and stop the Aegix application services. The project has three services:
+Use this skill to start, verify, and stop the Aegix local services.
 
 | Service | Location | Port |
 |---|---|---|
 | Backend Python API | `backend/` | 8000 |
-| Backend Node gateway | `backend/node/` | 7000 |
-| Frontend Vite dev server | root | 5173 |
+| Backend Node I/O | `backend/node/` | 7001 |
+| Backend Rust indexer | `backend/rust-indexer/` | 7100 |
+| Frontend Vite dev server | repository root | 8080 |
 
 ## 1. Prerequisites check
 
@@ -24,11 +25,12 @@ Before starting anything:
 
 - Verify Python 3.14+ is available: `python --version`
 - Verify Bun is available: `bun --version`
-- Verify pnpm is available (for node gateway): `pnpm --version`
-- Check backend `.env` exists and has `NVIDIA_API_KEY` set
+- Verify pnpm is available for Node I/O: `pnpm --version`
+- Verify Cargo is available if Rust auto-build is enabled: `cargo --version`
+- Check backend `.env` exists and has the required provider keys
 - Check no stale processes on target ports:
-  - `Get-Process -Id (Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue` (Windows)
-  - `lsof -ti:8000 2>/dev/null` (Linux/macOS)
+  - `Get-NetTCPConnection -LocalPort 8000,7001,7100,8080 -ErrorAction SilentlyContinue` on Windows
+  - `lsof -ti:8000,7001,7100,8080 2>/dev/null` on Linux/macOS
 
 ## 2. Start backend
 
@@ -38,20 +40,24 @@ cd backend
 python main.py
 ```
 
-This starts both the FastAPI Python API (port 8000) and the Node.js gateway (port 7000). The process runs in the foreground — you should run it in a **separate terminal** or **background process**.
+This starts the FastAPI Python API on 8000, Node I/O on 7001, and the Rust indexer on 7100 when its binary is built. The process runs in the foreground, so run it in a separate terminal or background process.
 
 To run in background on Windows:
+
 ```powershell
 Start-Process -NoNewWindow -FilePath "python" -ArgumentList "main.py" -WorkingDirectory "backend" -RedirectStandardOutput "backend.log" -RedirectStandardError "backend-err.log"
 ```
 
-Wait 5 seconds then verify:
+Wait 5 seconds, then verify:
+
 ```powershell
 Start-Sleep -Seconds 5
-curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/v1/health/live
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:7001/health
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:7100/health
 ```
 
-Expected: `200`. If not, wait 5 more seconds and retry. If still failing, read `backend.log` / `backend-err.log`.
+Python and Node should return `200`. Rust returns `200` only when `backend/rust-indexer` has been built.
 
 ## 3. Start frontend
 
@@ -61,63 +67,41 @@ bun run dev
 ```
 
 To run in background on Windows:
+
 ```powershell
 Start-Process -NoNewWindow -FilePath "bun" -ArgumentList "run dev" -WorkingDirectory "." -RedirectStandardOutput "frontend.log" -RedirectStandardError "frontend-err.log"
 ```
 
 Verify:
+
 ```powershell
-curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5173
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080
 ```
 
 Expected: `200`.
 
-## 4. Health check (both services)
+## 4. Health check
 
 ```powershell
-# Backend API health
-curl -s http://127.0.0.1:8000/health
-
-# Frontend
-curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5173
-
-# Node gateway (if needed)
-curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:7000/health
+curl -s http://127.0.0.1:8000/api/v1/health/live
+curl -s http://127.0.0.1:7001/health
+curl -s http://127.0.0.1:7100/health
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080
 ```
-
-All should return `200`.
 
 ## 5. Stop services
 
-To stop gracefully:
-
 ```powershell
-# Find and kill backend Python process
 Get-Process -Id (Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force
-
-# Find and kill frontend (bun) process  
-Get-Process -Id (Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force
-
-# Verify all ports are free
-Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue
-Get-NetTCPConnection -LocalPort 7000 -ErrorAction SilentlyContinue
-Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue
+Get-Process -Id (Get-NetTCPConnection -LocalPort 7001 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process -Id (Get-NetTCPConnection -LocalPort 7100 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
 On Linux/macOS:
+
 ```bash
-kill $(lsof -ti:8000) 2>/dev/null; kill $(lsof -ti:5173) 2>/dev/null; kill $(lsof -ti:7000) 2>/dev/null; true
+kill $(lsof -ti:8000) 2>/dev/null; kill $(lsof -ti:7001) 2>/dev/null; kill $(lsof -ti:7100) 2>/dev/null; kill $(lsof -ti:8080) 2>/dev/null; true
 ```
 
-## 6. Restart flow (for testing with changes)
-
-```powershell
-# 1. Stop services
-# 2. Rebuild if needed: cd backend && pip install -r requirements.txt
-# 3. Start backend
-# 4. Wait for health
-# 5. Start frontend
-# 6. Verify both
-```
-
-Always verify with an actual HTTP request — process being alive does not mean the service is ready.
+Always verify with an actual HTTP request. A live process does not guarantee service readiness.

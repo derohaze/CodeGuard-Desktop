@@ -52,7 +52,21 @@ def build_scan_work_units(
                 break
         review_items = trimmed
     else:
-        review_items = base_items
+        review_items = []
+        file_counts: dict[str, int] = {}
+        selected_files: set[str] = set()
+        for item in base_items:
+            file_path = str(item.get("file", ""))
+            if file_path not in selected_files and len(selected_files) >= config.max_hotspot_files:
+                continue
+            next_count = file_counts.get(file_path, 0)
+            if next_count >= config.max_blocks_per_file:
+                continue
+            selected_files.add(file_path)
+            file_counts[file_path] = next_count + 1
+            review_items.append(item)
+            if len(review_items) >= config.fast_risk_budget_items:
+                break
 
     return {
         "review_items": review_items,
@@ -63,7 +77,7 @@ def build_scan_work_units(
             "block_units_total": sum(len(item.get("blocks", [])) for item in file_segments),
             "review_block_units": len(review_items),
             "path_units_total": len(path_units),
-            "strategy": "full_repository_blocks" if config.mode == "deep" else "prioritized_hotspots",
+            "strategy": "bounded_repository_blocks" if config.mode == "deep" else "prioritized_hotspots",
         },
     }
 

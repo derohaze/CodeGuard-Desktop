@@ -7,11 +7,15 @@ from app.infrastructure.services.repository.repository_analysis import read_text
 def build_service_graph(source_root: Path, files: list[Path]) -> list[dict]:
     edges: list[dict] = []
     service_files: dict[str, list[str]] = {}
+    target_names_by_family: dict[str, dict[str, str]] = {}
     for path in files:
         rel = relative_path(path, source_root)
         service_name = _infer_service_name(rel)
         if service_name:
             service_files.setdefault(service_name, []).append(rel)
+        family = _language_family(path)
+        if family:
+            target_names_by_family.setdefault(family, {})[path.stem.lower()] = rel
 
     for path in files:
         if path.suffix.lower() not in {".py", ".js", ".ts", ".tsx", ".php", ".java", ".go", ".jsp", ".jspf"}:
@@ -23,15 +27,13 @@ def build_service_graph(source_root: Path, files: list[Path]) -> list[dict]:
             if not any(token in lowered for token in ("_service_addr", "_service_url", "grpc.newclient", "grpc.dial", "handlefunc(", "http://", "https://", "dns:///")):
                 continue
 
-        for target in files:
-            if target == path:
-                continue
-            if not _same_language_family(path, target):
-                continue
-            target_rel = relative_path(target, source_root)
-            target_name = target.stem.lower()
-            if target_name and target_name in lowered:
-                edges.append({"from": file_path, "to": target_rel, "kind": "service_reference"})
+        family_targets = target_names_by_family.get(_language_family(path), {})
+        if len(family_targets) <= 2_000:
+            for target_name, target_rel in family_targets.items():
+                if target_rel == file_path:
+                    continue
+                if target_name and target_name in lowered:
+                    edges.append({"from": file_path, "to": target_rel, "kind": "service_reference"})
 
         for env_match in re.finditer(r'([A-Z][A-Z0-9_]+_SERVICE_(?:ADDR|URL|HOST))', text):
             normalized = _normalize_service_token(env_match.group(1))
@@ -55,20 +57,19 @@ def build_service_graph(source_root: Path, files: list[Path]) -> list[dict]:
     return edges[:4000]
 
 
-def _same_language_family(source: Path, target: Path) -> bool:
-    source_suffix = source.suffix.lower()
-    target_suffix = target.suffix.lower()
-    if source_suffix == ".java":
-        return target_suffix in {".java", ".jsp", ".jspf", ".xml"}
-    if source_suffix == ".php":
-        return target_suffix in {".php", ".jsp", ".jspf"}
-    if source_suffix in {".js", ".ts", ".tsx"}:
-        return target_suffix in {".js", ".ts", ".tsx"}
-    if source_suffix == ".py":
-        return target_suffix == ".py"
-    if source_suffix == ".go":
-        return target_suffix == ".go"
-    return False
+def _language_family(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".java", ".jsp", ".jspf", ".xml"}:
+        return "java"
+    if suffix == ".php":
+        return "php"
+    if suffix in {".js", ".ts", ".tsx"}:
+        return "node"
+    if suffix == ".py":
+        return "python"
+    if suffix == ".go":
+        return "go"
+    return ""
 
 
 def _normalize_service_token(token: str) -> str:

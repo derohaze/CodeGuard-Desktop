@@ -7,7 +7,7 @@ const MAGENTA = "\x1b[35m";
 const CYAN = "\x1b[36m";
 
 export function logStartup(message: string): void {
-  console.log(`${MAGENTA}[node-gateway]${RESET} ${message}`);
+  console.log(`${MAGENTA}[node-io]${RESET} ${message}`);
 }
 
 export function logRequest(params: {
@@ -15,18 +15,13 @@ export function logRequest(params: {
   path: string;
   statusCode: number;
   durationMs: number;
-  target: "gateway" | "python-api";
+  target: "node-io";
 }): void {
   const status = colorStatus(params.statusCode);
-  const target = params.target === "python-api" ? `${CYAN}python-api${RESET}` : `${MAGENTA}gateway${RESET}`;
   console.log(
-    `${MAGENTA}[node-gateway]${RESET} ${params.method.padEnd(6)} ${params.path} ` +
-      `${status} ${DIM}${params.durationMs.toFixed(1)}ms${RESET} -> ${target}`,
+    `${MAGENTA}[node-io]${RESET} ${params.method.padEnd(6)} ${params.path} ` +
+      `${status} ${DIM}${params.durationMs.toFixed(1)}ms${RESET} -> ${MAGENTA}${params.target}${RESET}`,
   );
-}
-
-export function logProxyError(method: string, path: string): void {
-  console.error(`${MAGENTA}[node-gateway]${RESET} ${RED}proxy error${RESET} ${method} ${path} -> ${CYAN}python-api${RESET}`);
 }
 
 function colorStatus(statusCode: number): string {

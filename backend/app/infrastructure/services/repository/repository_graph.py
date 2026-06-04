@@ -6,8 +6,10 @@ from app.infrastructure.services.repository.call_graph import build_call_graph
 from app.infrastructure.services.repository.python_flow_analysis import analyze_python_file
 from app.infrastructure.services.repository.service_graph import build_service_graph
 from app.infrastructure.services.repository.repository_analysis import (
+    MAX_ARTIFACT_CONTENT_FILES,
     detect_route_summary,
     parse_imports,
+    prioritize_files_for_analysis,
     read_text,
     relative_path,
 )
@@ -20,11 +22,12 @@ AUTH_KEYWORDS = ("auth", "jwt", "token", "session", "login", "bearer")
 def build_repository_graph(source_root: Path, files: list[Path], framework_profile: dict) -> dict:
     import_edges: list[dict] = []
     route_nodes: list[dict] = []
-    auth_nodes: list[dict] = detect_auth_boundaries(source_root, files)
+    analysis_files = prioritize_files_for_analysis(files, MAX_ARTIFACT_CONTENT_FILES)
+    auth_nodes: list[dict] = detect_auth_boundaries(source_root, analysis_files)
 
     internal_files = {
         relative_path(path, source_root): path
-        for path in files
+        for path in analysis_files
         if path.suffix.lower() in {".py", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs", ".php", ".java", ".go", ".jsp", ".jspf", ".xml", ".graphql", ".gql"}
     }
     known_modules = set(internal_files)

@@ -12,11 +12,14 @@ from app.core.config import get_settings
 
 
 BACKEND_ROOT = Path(__file__).resolve().parent
-NODE_GATEWAY_ROOT = BACKEND_ROOT / "node"
+NODE_IO_ROOT = BACKEND_ROOT / "node"
+RUST_INDEXER_ROOT = BACKEND_ROOT / "rust-indexer"
+RUST_INDEXER_BINARY_NAME = "codeguard-rust-indexer.exe" if os.name == "nt" else "codeguard-rust-indexer"
 RESET = "\033[0m"
 CYAN = "\033[36m"
 GREEN = "\033[32m"
 MAGENTA = "\033[35m"
+YELLOW = "\033[33m"
 
 UVICORN_LOG_CONFIG = {
     "version": 1,
@@ -74,7 +77,16 @@ def _should_start_embedded_worker() -> bool:
 
 def _should_enable_reload() -> bool:
     settings = get_settings()
-    return settings.app_env == "development" and settings.api_workers == 1 and not _should_start_embedded_worker()
+    return (
+        settings.api_reload_enabled
+        and settings.app_env == "development"
+        and settings.api_workers == 1
+        and not _should_start_embedded_worker()
+    )
+
+
+def _reload_dirs() -> list[str]:
+    return [str(BACKEND_ROOT / "app")]
 
 
 def _start_embedded_worker() -> BaseProcess | None:
@@ -106,51 +118,131 @@ def _loopback_host(host: str) -> str:
 def _find_pnpm() -> str:
     executable = shutil.which("pnpm.cmd" if os.name == "nt" else "pnpm")
     if executable is None:
-        raise RuntimeError("pnpm is required to run the backend Node gateway.")
+        raise RuntimeError("pnpm is required to run the backend Node I/O service.")
     return executable
 
 
-def _ensure_node_gateway_dependencies(pnpm: str) -> None:
-    if (NODE_GATEWAY_ROOT / "node_modules").exists():
+def _ensure_node_io_dependencies(pnpm: str) -> None:
+    if (NODE_IO_ROOT / "node_modules").exists():
         return
-    subprocess.run([pnpm, "install"], cwd=NODE_GATEWAY_ROOT, check=True)
+    subprocess.run([pnpm, "install"], cwd=NODE_IO_ROOT, check=True)
 
 
-def _start_node_gateway() -> subprocess.Popen:
+def _start_node_io() -> subprocess.Popen | None:
     settings = get_settings()
-    pnpm = _find_pnpm()
-    _ensure_node_gateway_dependencies(pnpm)
+    try:
+        pnpm = _find_pnpm()
+        _ensure_node_io_dependencies(pnpm)
+    except RuntimeError as exc:
+        print(f"{GREEN}[backend-main]{RESET} {MAGENTA}node-io{RESET}=unavailable ({exc})", flush=True)
+        return None
+
     env = os.environ.copy()
-    env.setdefault("PYTHON_API_BASE_URL", f"http://{_loopback_host(settings.app_host)}:{settings.app_port}")
-    env.setdefault("NODE_GATEWAY_HOST", "127.0.0.1")
-    env.setdefault("NODE_GATEWAY_PORT", "7000")
+    env.setdefault("NODE_IO_HOST", settings.node_io_host)
+    env.setdefault("NODE_IO_PORT", str(settings.node_io_port))
     return subprocess.Popen(
-        [pnpm, "--silent", "gateway:dev"],
-        cwd=NODE_GATEWAY_ROOT,
+        [pnpm, "--silent", "io:dev"],
+        cwd=NODE_IO_ROOT,
         env=env,
     )
 
 
-def _stop_node_gateway(gateway_process: subprocess.Popen | None) -> None:
-    if gateway_process is None or gateway_process.poll() is not None:
+def _stop_process(process: subprocess.Popen | None) -> None:
+    if process is None or process.poll() is not None:
         return
-    gateway_process.terminate()
+    process.terminate()
     try:
-        gateway_process.wait(timeout=5)
+        process.wait(timeout=5)
     except subprocess.TimeoutExpired:
-        gateway_process.kill()
-        gateway_process.wait(timeout=5)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def _find_rust_indexer_binary() -> Path | None:
+    settings = get_settings()
+    candidates: list[Path] = []
+    if settings.rust_indexer_binary:
+        candidates.append(Path(settings.rust_indexer_binary).expanduser())
+    candidates.extend(
+        [
+            RUST_INDEXER_ROOT / "target" / "release" / RUST_INDEXER_BINARY_NAME,
+            RUST_INDEXER_ROOT / "target" / "debug" / RUST_INDEXER_BINARY_NAME,
+        ]
+    )
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if resolved.is_file():
+            return resolved
+    return None
+
+
+def _maybe_build_rust_indexer() -> None:
+    settings = get_settings()
+    if not settings.rust_indexer_auto_build or _find_rust_indexer_binary() is not None:
+        return
+
+    cargo = shutil.which("cargo.exe" if os.name == "nt" else "cargo")
+    if cargo is None:
+        print(
+            f"{GREEN}[backend-main]{RESET} {YELLOW}rust-indexer{RESET}=source-ready "
+            "(cargo not found; skipping auto-build)",
+            flush=True,
+        )
+        return
+    subprocess.run([cargo, "build", "--release"], cwd=RUST_INDEXER_ROOT, check=True)
+
+
+def _start_rust_indexer() -> subprocess.Popen | None:
+    settings = get_settings()
+    if not settings.rust_indexer_enabled:
+        print(f"{GREEN}[backend-main]{RESET} {YELLOW}rust-indexer{RESET}=disabled", flush=True)
+        return None
+
+    try:
+        _maybe_build_rust_indexer()
+    except subprocess.CalledProcessError as exc:
+        print(f"{GREEN}[backend-main]{RESET} {YELLOW}rust-indexer{RESET}=build-failed ({exc})", flush=True)
+        return None
+
+    binary = _find_rust_indexer_binary()
+    if binary is None:
+        print(
+            f"{GREEN}[backend-main]{RESET} {YELLOW}rust-indexer{RESET}=source-ready "
+            "(binary missing; run cargo build --release in backend/rust-indexer)",
+            flush=True,
+        )
+        return None
+
+    return subprocess.Popen(
+        [
+            str(binary),
+            "serve",
+            "--host",
+            settings.rust_indexer_host,
+            "--port",
+            str(settings.rust_indexer_port),
+        ],
+        cwd=RUST_INDEXER_ROOT,
+    )
 
 
 if __name__ == "__main__":
     settings = get_settings()
     worker_process = _start_embedded_worker()
-    gateway_process = _start_node_gateway()
+    node_process = _start_node_io()
+    rust_process = _start_rust_indexer()
+    reload_enabled = _should_enable_reload()
+    rust_status = (
+        f"{YELLOW}rust-indexer{RESET}=http://{settings.rust_indexer_host}:{settings.rust_indexer_port}"
+        if rust_process is not None
+        else f"{YELLOW}rust-indexer{RESET}=not-running (build required)"
+    )
     try:
         print(
             f"{GREEN}[backend-main]{RESET} starting services | "
-            f"{MAGENTA}node-gateway{RESET}=http://127.0.0.1:7000 -> "
-            f"{CYAN}python-api{RESET}=http://{_loopback_host(settings.app_host)}:{settings.app_port}",
+            f"{CYAN}python-api{RESET}=http://{_loopback_host(settings.app_host)}:{settings.app_port} | "
+            f"{MAGENTA}node-io{RESET}=http://{settings.node_io_host}:{settings.node_io_port} | "
+            f"{rust_status}",
             flush=True,
         )
         uvicorn.run(
@@ -158,9 +250,11 @@ if __name__ == "__main__":
             host=settings.app_host,
             port=settings.app_port,
             workers=settings.api_workers,
-            reload=_should_enable_reload(),
+            reload=reload_enabled,
+            reload_dirs=_reload_dirs() if reload_enabled else None,
             log_config=UVICORN_LOG_CONFIG,
         )
     finally:
-        _stop_node_gateway(gateway_process)
+        _stop_process(node_process)
+        _stop_process(rust_process)
         _stop_embedded_worker(worker_process)

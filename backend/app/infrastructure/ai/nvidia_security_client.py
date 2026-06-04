@@ -30,6 +30,9 @@ logger = logging.getLogger("aegix.ai")
 
 _RATE_LIMIT_FALLBACK_COOLDOWN_SECONDS = 30.0
 _RATE_LIMIT_MAX_COOLDOWN_SECONDS = 60.0
+_PROVIDER_REQUEST_LOCK = asyncio.Lock()
+_PROVIDER_NEXT_REQUEST_AT = 0.0
+_PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL = 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,8 +63,8 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
         self.request_timeout_seconds = settings.nvidia_timeout_seconds
         self.retry_attempts = settings.nvidia_retry_attempts
         self.retry_backoff_seconds = settings.nvidia_retry_backoff_seconds
+        self.min_request_interval_seconds = settings.nvidia_min_request_interval_seconds
         self._api_key_cursor = 0
-        self._rate_limit_cooldown_until = 0.0
         self._runtime_events: list[str] = []
         self._runtime_metrics: dict[str, int] = {}
 
@@ -482,6 +485,7 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
                     "Authorization": f"Bearer {api_key}",
                 }
                 try:
+                    await self._wait_for_provider_slot(target)
                     async with httpx.AsyncClient(timeout=target.timeout_seconds) as client:
                         response = await client.post(url, json=payload, headers=headers)
                         response.raise_for_status()
@@ -604,6 +608,7 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
                     "Authorization": f"Bearer {api_key}",
                 }
                 try:
+                    await self._wait_for_provider_slot(target)
                     async with httpx.AsyncClient(timeout=target.timeout_seconds) as client:
                         response = await client.post(url, json=payload, headers=headers)
                         response.raise_for_status()
@@ -706,7 +711,7 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
         return [*api_keys[cursor:], *api_keys[:cursor]]
 
     def _raise_if_rate_limited(self, target: _ProviderTarget) -> None:
-        remaining_seconds = self._rate_limit_cooldown_until - time.monotonic()
+        remaining_seconds = _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL - time.monotonic()
         if remaining_seconds <= 0:
             return
         self._runtime_metrics["rate_limit_short_circuits"] = self._runtime_metrics.get("rate_limit_short_circuits", 0) + 1
@@ -720,12 +725,28 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
         )
 
     def _record_rate_limit_if_needed(self, error: ExternalAIServiceError) -> None:
+        global _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL
         if error.failure_kind != "rate_limit":
             return
         cooldown_seconds = _rate_limit_cooldown_seconds(error)
-        self._rate_limit_cooldown_until = max(self._rate_limit_cooldown_until, time.monotonic() + cooldown_seconds)
+        _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL = max(_PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL, time.monotonic() + cooldown_seconds)
         self._runtime_metrics["rate_limit_responses"] = self._runtime_metrics.get("rate_limit_responses", 0) + 1
         self._runtime_events.append("AI provider rate limit cooldown activated; later scan stages will use deterministic fallbacks until it expires.")
+
+    async def _wait_for_provider_slot(self, target: _ProviderTarget) -> None:
+        global _PROVIDER_NEXT_REQUEST_AT
+        async with _PROVIDER_REQUEST_LOCK:
+            self._raise_if_rate_limited(target)
+            wait_seconds = _PROVIDER_NEXT_REQUEST_AT - time.monotonic()
+            if wait_seconds > 0:
+                logger.info(
+                    "AI request throttled | provider=%s wait_seconds=%.2f",
+                    target.provider_name,
+                    wait_seconds,
+                )
+                await asyncio.sleep(wait_seconds)
+            interval_seconds = max(0.0, float(self.min_request_interval_seconds))
+            _PROVIDER_NEXT_REQUEST_AT = time.monotonic() + interval_seconds
 
 
 def _coerce_message_text(value) -> str:

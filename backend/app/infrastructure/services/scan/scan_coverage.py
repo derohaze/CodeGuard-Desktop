@@ -4,6 +4,7 @@ from app.domain.entities.scan import FindingEntity
 from app.infrastructure.services.repository.repository_analysis import (
     SUPPORTED_EXTENSIONS,
     extract_relevant_excerpt,
+    prioritize_files_for_analysis,
     read_text,
     relative_path,
 )
@@ -11,11 +12,16 @@ from app.infrastructure.services.repository.repository_analysis import (
 
 BLOCK_TARGET_LINES = 90
 BLOCK_MAX_LINES = 150
+MAX_SEGMENTED_FILES_FAST = 240
+MAX_SEGMENTED_FILES_DEEP = 600
+MAX_BLOCKS_PER_FILE_FAST = 32
+MAX_BLOCKS_PER_FILE_DEEP = 16
 
 
 def build_file_segments(files: list[Path], source_root: Path, scan_mode: str = "fast") -> list[dict]:
     segments: list[dict] = []
-    for path in files:
+    max_files = MAX_SEGMENTED_FILES_DEEP if scan_mode == "deep" else MAX_SEGMENTED_FILES_FAST
+    for path in prioritize_files_for_analysis(files, max_files):
         if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             continue
 
@@ -121,6 +127,7 @@ def segment_file(file_path: str, text: str, scan_mode: str = "fast") -> list[dic
         return []
 
     windows: list[dict] = []
+    max_blocks = MAX_BLOCKS_PER_FILE_DEEP if scan_mode == "deep" else MAX_BLOCKS_PER_FILE_FAST
     for start in range(0, len(lines), BLOCK_TARGET_LINES):
         end = min(len(lines), start + BLOCK_MAX_LINES)
         snippet = "\n".join(f"{start + line_index + 1}: {line}" for line_index, line in enumerate(lines[start:end]))
@@ -134,7 +141,7 @@ def segment_file(file_path: str, text: str, scan_mode: str = "fast") -> list[dic
                 "snippet": snippet or extract_relevant_excerpt(text),
             }
         )
-        if scan_mode != "deep" and len(windows) >= 32:
+        if len(windows) >= max_blocks:
             break
     return windows
 

@@ -1,5 +1,5 @@
 {
-  "name": "codeguard-security-gateway",
+  "name": "codeguard-node-io",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,10 +7,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "gateway:dev": "tsx src/server.ts",
-    "gateway:build": "tsc -p tsconfig.json",
-    "gateway:start": "node dist/server.js",
-    "gateway:typecheck": "tsc --noEmit -p tsconfig.json"
+    "io:dev": "tsx src/server.ts",
+    "io:build": "tsc -p tsconfig.json",
+    "io:start": "node dist/server.js",
+    "io:typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

@@ -1,0 +1,28 @@
+{
+  "session_id": "6a2160aa8929c0a26fc4acd4",
+  "created_at": "2026-06-04T11:40:09.950823+00:00",
+  "source_path": "D:\\Haze\\elevflow V2\\back-end",
+  "source_root": "D:\\Haze\\elevflow V2\\back-end",
+  "target_type": "folder",
+  "sandbox_mode": "isolated_copy",
+  "workspace_root": "D:\\Haze\\CodeGuard\\backend\\artifacts\\penetration_sandboxes\\6a2160aa8929c0a26fc4acd4\\workspace",
+  "copied_files": [
+    "core/app/repositories/security/repository.py",
+    "core/app/repositories/catalog/repository.py",
+    "core/app/repositories/customers/repository.py",
+    "core/app/repositories/notifications/repository.py",
+    "core/app/repositories/webhooks/repository.py",
+    "core/app/core/circuit_breaker.py",
+    "core/app/core/logging.py",
+    "core/app/core/middleware/rate_limit.py",
+    "core/app/db/memory.py",
+    "core/app/repositories/woocommerce/sync.py"
+  ],
+  "skipped_files": [],
+  "copied_files_count": 10,
+  "skipped_files_count": 0,
+  "max_files": 120,
+  "max_total_mb": 50,
+  "copied_total_bytes": 103574,
+  "truncated": false
+}

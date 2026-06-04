@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     nvidia_timeout_seconds: float = Field(default=120.0, ge=30.0, le=600.0, alias="NVIDIA_TIMEOUT_SECONDS")
     nvidia_retry_attempts: int = Field(default=2, ge=1, le=6, alias="NVIDIA_RETRY_ATTEMPTS")
     nvidia_retry_backoff_seconds: float = Field(default=1.0, ge=0.0, le=30.0, alias="NVIDIA_RETRY_BACKOFF_SECONDS")
+    nvidia_min_request_interval_seconds: float = Field(default=2.0, ge=0.0, le=60.0, alias="NVIDIA_MIN_REQUEST_INTERVAL_SECONDS")
     nvidia_enable_thinking: bool = Field(default=True, alias="NVIDIA_ENABLE_THINKING")
     nvidia_detection_model: str | None = Field(default=None, alias="NVIDIA_DETECTION_MODEL")
     nvidia_explain_model: str | None = Field(default=None, alias="NVIDIA_EXPLAIN_MODEL")
@@ -79,6 +80,16 @@ class Settings(BaseSettings):
     penetration_sandbox_enabled: bool = Field(default=True, alias="PENETRATION_SANDBOX_ENABLED")
     penetration_sandbox_max_files: int = Field(default=120, ge=10, le=2000, alias="PENETRATION_SANDBOX_MAX_FILES")
     penetration_sandbox_max_total_mb: int = Field(default=50, ge=5, le=4096, alias="PENETRATION_SANDBOX_MAX_TOTAL_MB")
+    api_reload_enabled: bool = Field(default=False, alias="API_RELOAD_ENABLED")
+    node_io_host: str = Field(default="127.0.0.1", alias="NODE_IO_HOST")
+    node_io_port: int = Field(default=7001, ge=1, le=65535, alias="NODE_IO_PORT")
+    rust_indexer_enabled: bool = Field(default=True, alias="RUST_INDEXER_ENABLED")
+    rust_indexer_host: str = Field(default="127.0.0.1", alias="RUST_INDEXER_HOST")
+    rust_indexer_port: int = Field(default=7100, ge=1, le=65535, alias="RUST_INDEXER_PORT")
+    rust_indexer_binary: str | None = Field(default=None, alias="RUST_INDEXER_BINARY")
+    rust_indexer_auto_build: bool = Field(default=True, alias="RUST_INDEXER_AUTO_BUILD")
+    rust_indexer_max_files: int = Field(default=12000, ge=1, le=100000, alias="RUST_INDEXER_MAX_FILES")
+    rust_indexer_analyze_timeout_seconds: float = Field(default=8.0, ge=1.0, le=120.0, alias="RUST_INDEXER_ANALYZE_TIMEOUT_SECONDS")
     artifacts_dir: str = Field(
         default=str(Path(__file__).resolve().parents[2] / "artifacts"),
         alias="ARTIFACTS_DIR",

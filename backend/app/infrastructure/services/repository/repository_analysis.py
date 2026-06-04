@@ -1,12 +1,48 @@
+from dataclasses import dataclass
 import hashlib
+import os
 import re
 from pathlib import Path
 
 
+MANIFEST_FILES = {
+    "package.json",
+    "requirements.txt",
+    "pyproject.toml",
+    "build.gradle",
+    "pom.xml",
+    "composer.json",
+    "go.mod",
+    "web.xml",
+}
 SUPPORTED_EXTENSIONS = {
     ".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".go", ".rb", ".php", ".cs", ".kt", ".rs", ".mjs", ".cjs", ".xml", ".jsp", ".jspf", ".graphql", ".gql",
 }
-IGNORED_DIRS = {"node_modules", ".git", "dist", "build", ".next", ".venv", "__pycache__", ".idea", ".vscode"}
+IGNORED_DIRS = {
+    "node_modules",
+    ".git",
+    "dist",
+    "build",
+    ".next",
+    ".venv",
+    "__pycache__",
+    ".idea",
+    ".vscode",
+    ".cache",
+    ".gradle",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".turbo",
+    "coverage",
+    "out",
+    "target",
+}
+MAX_COLLECTED_FILES = 12_000
+MAX_WALK_ENTRIES = 1_000_000
+MAX_FILE_READ_BYTES = 512 * 1024
+MAX_PROFILE_CONTENT_FILES = 1_000
+MAX_ARTIFACT_CONTENT_FILES = 4_000
 FRAMEWORK_HINTS = {
     "graphql": [
         r"\bimport graphene\b",
@@ -99,24 +135,131 @@ SINK_PATTERNS = (
 )
 
 
+@dataclass(frozen=True, slots=True)
+class FileCollectionStats:
+    visited_entries: int
+    skipped_directories: int
+    skipped_files: int
+    unreadable_directories: int
+    truncated: bool
+
+
+@dataclass(frozen=True, slots=True)
+class FileCollectionResult:
+    files: list[Path]
+    stats: FileCollectionStats
+
+
 def collect_files(source: Path, target_type: str) -> list[Path]:
+    return collect_files_with_stats(source, target_type).files
+
+
+def collect_files_with_stats(
+    source: Path,
+    target_type: str,
+    *,
+    max_files: int = MAX_COLLECTED_FILES,
+    max_walk_entries: int = MAX_WALK_ENTRIES,
+) -> FileCollectionResult:
     if target_type == "file":
-        return [source]
+        return FileCollectionResult(
+            files=[source],
+            stats=FileCollectionStats(
+                visited_entries=1,
+                skipped_directories=0,
+                skipped_files=0,
+                unreadable_directories=0,
+                truncated=False,
+            ),
+        )
 
     files: list[Path] = []
-    for path in source.rglob("*"):
-        if not path.is_file():
-            continue
-        if any(part in IGNORED_DIRS for part in path.parts):
-            continue
-        if is_test_or_fixture_path(path):
-            continue
-        if path.suffix.lower() not in SUPPORTED_EXTENSIONS and path.name.lower() not in {
-            "package.json", "requirements.txt", "pyproject.toml", "build.gradle", "pom.xml", "composer.json", "go.mod", "web.xml"
-        }:
-            continue
-        files.append(path)
-    return files
+    visited_entries = 0
+    skipped_directories = 0
+    skipped_files = 0
+    unreadable_directories = 0
+    truncated = False
+    stack = [source]
+
+    while stack and not truncated:
+        directory = stack.pop()
+        try:
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    visited_entries += 1
+                    if visited_entries >= max_walk_entries:
+                        truncated = True
+                        break
+
+                    try:
+                        if entry.is_dir(follow_symlinks=False):
+                            if _should_skip_directory(entry.name):
+                                skipped_directories += 1
+                                continue
+                            stack.append(Path(entry.path))
+                            continue
+
+                        if not entry.is_file(follow_symlinks=False):
+                            skipped_files += 1
+                            continue
+                    except OSError:
+                        skipped_files += 1
+                        continue
+
+                    path = Path(entry.path)
+                    if is_test_or_fixture_path(path) or not is_supported_scan_file(path):
+                        skipped_files += 1
+                        continue
+
+                    files.append(path)
+                    if len(files) >= max_files:
+                        truncated = True
+                        break
+        except OSError:
+            unreadable_directories += 1
+
+    return FileCollectionResult(
+        files=prioritize_files_for_analysis(files),
+        stats=FileCollectionStats(
+            visited_entries=visited_entries,
+            skipped_directories=skipped_directories,
+            skipped_files=skipped_files,
+            unreadable_directories=unreadable_directories,
+            truncated=truncated,
+        ),
+    )
+
+
+def is_supported_scan_file(path: Path) -> bool:
+    return path.suffix.lower() in SUPPORTED_EXTENSIONS or path.name.lower() in MANIFEST_FILES
+
+
+def prioritize_files_for_analysis(files: list[Path], limit: int | None = None) -> list[Path]:
+    ordered = sorted(files, key=_scan_file_sort_key)
+    if limit is None:
+        return ordered
+    return ordered[: max(0, int(limit))]
+
+
+def _should_skip_directory(name: str) -> bool:
+    normalized = name.lower()
+    return normalized in IGNORED_DIRS or normalized in {"test", "tests", "__tests__", "spec", "specs", "fixtures"}
+
+
+def _scan_file_sort_key(path: Path) -> tuple[int, str]:
+    lowered = path.as_posix().lower()
+    priority = 20
+    if path.name.lower() in MANIFEST_FILES:
+        priority = 0
+    elif any(token in lowered for token in ("auth", "login", "session", "jwt", "token", "security")):
+        priority = 1
+    elif any(token in lowered for token in ("route", "router", "controller", "api", "endpoint", "resolver", "graphql")):
+        priority = 2
+    elif any(token in lowered for token in ("service", "repository", "dao", "upload", "storage", "client")):
+        priority = 3
+    elif path.name.lower() in {"main.py", "app.py", "server.py", "index.ts", "index.js", "main.go", "server.go"}:
+        priority = 4
+    return (priority, lowered)
 
 
 def is_test_or_fixture_path(path: Path) -> bool:
@@ -134,11 +277,11 @@ def build_repository_profile(source_root: Path, files: list[Path]) -> dict:
     manifests = [
         path.name
         for path in files
-        if path.name in {"package.json", "requirements.txt", "pyproject.toml", "build.gradle", "pom.xml", "composer.json", "go.mod", "web.xml"}
+        if path.name.lower() in MANIFEST_FILES
     ]
     framework_hits: set[str] = set()
-    for path in files[:240]:
-        if path.name not in {"package.json", "requirements.txt", "pyproject.toml", "build.gradle", "pom.xml", "composer.json", "go.mod", "web.xml"} and path.suffix.lower() not in {
+    for path in prioritize_files_for_analysis(files, MAX_PROFILE_CONTENT_FILES):
+        if path.name.lower() not in MANIFEST_FILES and path.suffix.lower() not in {
             ".py", ".ts", ".tsx", ".js", ".jsx", ".java", ".php", ".go", ".xml", ".jsp", ".jspf", ".graphql", ".gql"
         }:
             continue
@@ -173,7 +316,9 @@ def build_repository_artifacts(source_root: Path, files: list[Path], profile: di
     sink_candidates: list[dict] = []
     hotspot_files: list[dict] = []
 
-    for path in files:
+    supported_files = [path for path in files if path.suffix.lower() in SUPPORTED_EXTENSIONS]
+    analysis_files = prioritize_files_for_analysis(supported_files, MAX_ARTIFACT_CONTENT_FILES)
+    for path in analysis_files:
         if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             continue
 
@@ -217,6 +362,9 @@ def build_repository_artifacts(source_root: Path, files: list[Path], profile: di
     coverage = {
         "reviewed_hotspots": len(reviewed_files),
         "eligible_files": profile["file_count"],
+        "indexed_files": len(files),
+        "local_analysis_files": len(analysis_files),
+        "local_analysis_truncated": len(analysis_files) < len(supported_files),
         "route_files": len(route_files),
         "auth_files": len(auth_files),
         "source_candidates": len(source_candidates),
@@ -916,7 +1064,9 @@ def estimate_review_item_tokens(item: dict[str, str]) -> int:
 
 def read_text(path: Path) -> str:
     try:
-        return path.read_text(encoding="utf-8", errors="ignore")
+        with path.open("rb") as handle:
+            content = handle.read(MAX_FILE_READ_BYTES)
+        return content.decode("utf-8", errors="ignore")
     except OSError:
         return ""
 

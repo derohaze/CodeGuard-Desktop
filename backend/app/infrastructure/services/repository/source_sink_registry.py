@@ -2,7 +2,13 @@ import re
 from pathlib import Path
 
 from app.infrastructure.services.repository.python_flow_analysis import analyze_python_file
-from app.infrastructure.services.repository.repository_analysis import INPUT_TOKENS, read_text, relative_path
+from app.infrastructure.services.repository.repository_analysis import (
+    INPUT_TOKENS,
+    MAX_ARTIFACT_CONTENT_FILES,
+    prioritize_files_for_analysis,
+    read_text,
+    relative_path,
+)
 
 
 SOURCE_PATTERNS = {
@@ -94,7 +100,7 @@ def build_source_sink_registry(source_root: Path, files: list[Path], framework_p
     sanitizers: list[dict] = []
     python_analyses: dict[str, dict] = {}
 
-    for path in files:
+    for path in prioritize_files_for_analysis(files, MAX_ARTIFACT_CONTENT_FILES):
         if path.suffix.lower() not in {".py", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs", ".php", ".java", ".go", ".jsp", ".jspf"}:
             continue
         file_path = relative_path(path, source_root)

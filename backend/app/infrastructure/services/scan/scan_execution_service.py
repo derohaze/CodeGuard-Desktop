@@ -20,13 +20,15 @@ from app.infrastructure.services.scan.duplicate_clustering import cluster_findin
 from app.infrastructure.services.repository.evidence_extraction import extract_evidence
 from app.infrastructure.services.repository.framework_detection import detect_framework_profile
 from app.infrastructure.services.repository.path_tracing import trace_candidate_paths
+from app.infrastructure.services.repository.rust_indexer import build_native_index
 from app.infrastructure.services.repository.repository_analysis import (
     adaptive_chunk_work_items,
     build_finding_id,
     build_repository_artifacts,
     build_repository_profile,
-    collect_files,
+    collect_files_with_stats,
     default_fix_suggestions,
+    prioritize_files_for_analysis,
     read_text,
     run_precise_heuristics,
     severity_rank,
@@ -87,6 +89,103 @@ def create_initial_session(source_path: str, target_type: str, preset: str, scan
             "work_unit_strategy": {},
         },
     )
+
+
+def build_scan_discovery_context(
+    source: Path,
+    source_root: Path,
+    target_type: str,
+    preset: str,
+    scan_mode: str,
+    source_path: str,
+    existing_source_fingerprint: str | None,
+) -> dict:
+    file_collection = collect_files_with_stats(source, target_type)
+    files = file_collection.files
+    profile = build_repository_profile(source_root, files)
+    scan_plan = build_scan_plan(
+        source_path=source,
+        target_type=target_type,
+        preset=preset,
+        scan_mode=scan_mode,
+        repository_profile=profile,
+    )
+    framework_profile = detect_framework_profile(source_root, files, profile)
+    snapshot_fingerprint = build_repository_snapshot_fingerprint(source_root, files)
+    source_fingerprint = existing_source_fingerprint or build_source_fingerprint(source_path, target_type)
+    analysis_cache_key = build_analysis_cache_key(
+        source_fingerprint=source_fingerprint,
+        snapshot_fingerprint=snapshot_fingerprint,
+        scan_mode=scan_mode,
+        target_type=target_type,
+        preset=preset,
+    )
+    stats = file_collection.stats
+    return {
+        "files": files,
+        "profile": profile,
+        "scan_plan": scan_plan,
+        "framework_profile": framework_profile,
+        "analysis_cache_key": analysis_cache_key,
+        "collection_stats": {
+            "visited_entries": stats.visited_entries,
+            "skipped_directories": stats.skipped_directories,
+            "skipped_files": stats.skipped_files,
+            "unreadable_directories": stats.unreadable_directories,
+            "truncated": stats.truncated,
+        },
+    }
+
+
+def build_scan_analysis_context(
+    source_root: Path,
+    files: list[Path],
+    profile: dict,
+    framework_profile: dict,
+    scan_mode: str,
+) -> dict:
+    repository_artifacts = build_repository_artifacts(source_root, files, profile)
+    repository_graph = build_repository_graph(source_root, files, framework_profile)
+    security_registry = build_source_sink_registry(source_root, files, framework_profile)
+    traced_paths = trace_candidate_paths(source_root, repository_graph, security_registry, files)
+    file_segments = build_file_segments(files, source_root, scan_mode=scan_mode)
+    native_index = build_native_index(source_root)
+    return {
+        "repository_artifacts": repository_artifacts,
+        "repository_graph": repository_graph,
+        "security_registry": security_registry,
+        "traced_paths": traced_paths,
+        "file_segments": file_segments,
+        "native_index": native_index,
+    }
+
+
+def build_prioritized_review_context(
+    scan_mode: str,
+    files: list[Path],
+    source_root: Path,
+    repository_artifacts: dict,
+    repository_map: dict,
+    file_segments: list[dict],
+    target_type: str,
+    traced_paths: dict,
+) -> dict:
+    work_units = build_scan_work_units(
+        scan_mode=scan_mode,
+        files=files,
+        source_root=source_root,
+        repository_artifacts=repository_artifacts,
+        repository_map=repository_map,
+        file_segments=file_segments,
+        target_type=target_type,
+        traced_paths=traced_paths,
+    )
+    prioritized = prioritize_review_queue(
+        work_items=build_path_review_work_items(work_units["review_items"], traced_paths),
+        path_units=work_units["path_units"],
+        scan_mode=scan_mode,
+    )
+    return {"work_units": work_units, "prioritized": prioritized}
 
 
 class ScanExecutionService:
@@ -177,35 +276,38 @@ class ScanExecutionService:
                 },
             )
 
-            files = collect_files(source, session.target_type)
-            profile = build_repository_profile(source_root, files)
-            scan_plan = build_scan_plan(
-                source_path=source,
-                target_type=session.target_type,
-                preset=session.preset,
-                scan_mode=session.scan_mode,
-                repository_profile=profile,
-            )
-            framework_profile = detect_framework_profile(source_root, files, profile)
-            snapshot_fingerprint = build_repository_snapshot_fingerprint(source_root, files)
-            source_fingerprint = session.source_fingerprint or build_source_fingerprint(
-                session.source_path,
+            discovery_context = await asyncio.to_thread(
+                build_scan_discovery_context,
+                source,
+                source_root,
                 session.target_type,
+                session.preset,
+                session.scan_mode,
+                session.source_path,
+                session.source_fingerprint,
             )
-            analysis_cache_key = build_analysis_cache_key(
-                source_fingerprint=source_fingerprint,
-                snapshot_fingerprint=snapshot_fingerprint,
-                scan_mode=session.scan_mode,
-                target_type=session.target_type,
-                preset=session.preset,
-            )
+            files = discovery_context["files"]
+            profile = discovery_context["profile"]
+            scan_plan = discovery_context["scan_plan"]
+            framework_profile = discovery_context["framework_profile"]
+            analysis_cache_key = discovery_context["analysis_cache_key"]
+            collection_stats = discovery_context["collection_stats"]
             cached_analysis = self._get_cached_analysis(analysis_cache_key)
             if cached_analysis is None:
-                repository_artifacts = build_repository_artifacts(source_root, files, profile)
-                repository_graph = build_repository_graph(source_root, files, framework_profile)
-                security_registry = build_source_sink_registry(source_root, files, framework_profile)
-                traced_paths = trace_candidate_paths(source_root, repository_graph, security_registry, files)
-                file_segments = build_file_segments(files, source_root, scan_mode=session.scan_mode)
+                analysis_context = await asyncio.to_thread(
+                    build_scan_analysis_context,
+                    source_root,
+                    files,
+                    profile,
+                    framework_profile,
+                    session.scan_mode,
+                )
+                repository_artifacts = analysis_context["repository_artifacts"]
+                repository_graph = analysis_context["repository_graph"]
+                security_registry = analysis_context["security_registry"]
+                traced_paths = analysis_context["traced_paths"]
+                file_segments = analysis_context["file_segments"]
+                native_index = analysis_context["native_index"]
                 self._set_cached_analysis(
                     analysis_cache_key,
                     {
@@ -214,6 +316,7 @@ class ScanExecutionService:
                         "security_registry": security_registry,
                         "traced_paths": traced_paths,
                         "file_segments": file_segments,
+                        "native_index": native_index,
                     },
                 )
                 logs.append("Built fresh repository graph and path-tracing artifacts.")
@@ -223,12 +326,38 @@ class ScanExecutionService:
                 security_registry = cached_analysis["security_registry"]
                 traced_paths = cached_analysis["traced_paths"]
                 file_segments = cached_analysis["file_segments"]
+                native_index = cached_analysis.get("native_index", {"available": False, "engine": "rust-indexer", "reason": "cache_legacy"})
+                logger.info(
+                    "[rust-indexer] analyze cache-hit | available=%s files_indexed=%s elapsed_ms=%s",
+                    bool(native_index.get("available")),
+                    int(native_index.get("files_indexed", 0) or 0),
+                    int(native_index.get("elapsed_ms", 0) or 0),
+                )
                 logs.append("Reused incremental analysis cache for repository graph and path tracing.")
             excluded_review_file_count = sum(1 for item in file_segments if int(item.get("block_count", 0)) == 0)
-            heuristic_candidates = collect_heuristic_candidates(files, source_root)
+            heuristic_candidates = await asyncio.to_thread(collect_heuristic_candidates, files, source_root)
             repository_inventory = build_repository_inventory(profile, files)
 
             logs.append(f"Indexed {profile['file_count']} code files across {profile['directory_count']} directories.")
+            if native_index.get("available"):
+                logs.append(
+                    "Rust native indexer enriched the repository map "
+                    f"({native_index.get('files_indexed', 0)} files in {native_index.get('elapsed_ms', 0)} ms)."
+                )
+            else:
+                logs.append(f"Rust native indexer unavailable ({native_index.get('reason', 'unknown')}); Python analysis continued.")
+            if collection_stats.get("truncated"):
+                logs.append(
+                    "Repository indexing reached the enterprise safety budget; analysis continues on the prioritized file set."
+                )
+            if collection_stats.get("unreadable_directories", 0):
+                logs.append(f"Skipped {collection_stats['unreadable_directories']} unreadable directorie(s) during indexing.")
+            if repository_artifacts["coverage"].get("local_analysis_truncated"):
+                logs.append(
+                    "Local static analysis prioritized "
+                    f"{repository_artifacts['coverage']['local_analysis_files']} of "
+                    f"{repository_artifacts['coverage']['eligible_files']} supported files for bounded processing."
+                )
             if framework_profile["frameworks"]:
                 logs.append(f"Detected stack hints: {', '.join(framework_profile['frameworks'][:4])}.")
             else:
@@ -316,6 +445,7 @@ class ScanExecutionService:
                         "repository_graph_summary": repository_graph["summary"],
                         "security_registry_summary": security_registry["summary"],
                         "path_summary": traced_paths["summary"],
+                        "native_index": native_index,
                     },
                     preset=session.preset,
                 )
@@ -377,21 +507,19 @@ class ScanExecutionService:
                 },
             )
 
-            work_units = build_scan_work_units(
-                scan_mode=session.scan_mode,
-                files=files,
-                source_root=source_root,
-                repository_artifacts=repository_artifacts,
-                repository_map=repository_map,
-                file_segments=file_segments,
-                target_type=session.target_type,
-                traced_paths=traced_paths,
+            prioritization_context = await asyncio.to_thread(
+                build_prioritized_review_context,
+                session.scan_mode,
+                files,
+                source_root,
+                repository_artifacts,
+                repository_map,
+                file_segments,
+                session.target_type,
+                traced_paths,
             )
-            prioritized = prioritize_review_queue(
-                work_items=build_path_review_work_items(work_units["review_items"], traced_paths),
-                path_units=work_units["path_units"],
-                scan_mode=session.scan_mode,
-            )
+            work_units = prioritization_context["work_units"]
+            prioritized = prioritization_context["prioritized"]
             work_items = prioritized["review_items"]
             path_units = prioritized["path_units"]
             segmentation_summary = work_units["segmentation_summary"]
@@ -922,6 +1050,7 @@ class ScanExecutionService:
             runtime_metrics = getattr(self.ai_client, "snapshot_runtime_metrics", lambda **_: None)()
             runtime_metrics = merge_runtime_metrics_with_penetration(runtime_metrics, penetration_report)
             runtime_metrics = merge_runtime_metrics_with_penetration_sandbox(runtime_metrics, penetration_sandbox)
+            runtime_metrics = merge_runtime_metrics_with_native_index(runtime_metrics, native_index)
             runtime_metrics = merge_runtime_metrics_with_agent_pipeline(runtime_metrics)
             latest_scan_job = (
                 await self._update_job(
@@ -1303,7 +1432,7 @@ def _build_scan_failure_message(exc: Exception) -> str:
 
 def collect_heuristic_candidates(files: list[Path], source_root: Path) -> list[dict]:
     heuristic_findings: list[dict] = []
-    for path in files:
+    for path in prioritize_files_for_analysis(files, 4_000):
         if path.suffix.lower() not in {".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".go", ".rb", ".php", ".cs", ".kt", ".rs", ".mjs", ".cjs"}:
             continue
         heuristic_findings.extend(run_precise_heuristics(path, read_text(path), source_root))
@@ -1588,6 +1717,19 @@ def merge_runtime_metrics_with_penetration_sandbox(runtime_metrics: dict | None,
         "copied_files": max(0, int(sandbox.get("copied_files", 0) or 0)),
         "skipped_files": max(0, int(sandbox.get("skipped_files", 0) or 0)),
         "truncated": bool(sandbox.get("truncated", False)),
+    }
+    return metrics or None
+
+
+def merge_runtime_metrics_with_native_index(runtime_metrics: dict | None, native_index: dict | None) -> dict | None:
+    metrics = dict(runtime_metrics) if isinstance(runtime_metrics, dict) else {}
+    native_index = native_index if isinstance(native_index, dict) else {}
+    metrics["rust_indexer"] = {
+        "available": bool(native_index.get("available")),
+        "engine": str(native_index.get("engine", "rust-indexer")),
+        "reason": str(native_index.get("reason", "")),
+        "files_indexed": max(0, int(native_index.get("files_indexed", 0) or 0)),
+        "elapsed_ms": max(0, int(native_index.get("elapsed_ms", 0) or 0)),
     }
     return metrics or None
 
