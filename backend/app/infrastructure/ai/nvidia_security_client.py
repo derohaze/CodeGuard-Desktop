@@ -30,9 +30,11 @@ logger = logging.getLogger("aegix.ai")
 
 _RATE_LIMIT_FALLBACK_COOLDOWN_SECONDS = 30.0
 _RATE_LIMIT_MAX_COOLDOWN_SECONDS = 60.0
+_COOLDOWN_WAIT_TASKS = {"explain", "fix_draft", "fix_retry", "fix_validate", "patch_validate", "final_patch"}
 _PROVIDER_REQUEST_LOCK = asyncio.Lock()
-_PROVIDER_NEXT_REQUEST_AT = 0.0
+_PROVIDER_NEXT_REQUEST_AT_BY_KEY: dict[str, float] = {}
 _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL = 0.0
+_PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL_BY_KEY: dict[str, float] = {}
 
 
 @dataclass(frozen=True, slots=True)
@@ -449,7 +451,7 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
 
     async def _chat_text(self, *, task_name: str, max_tokens: int, messages: list[dict], expect_json: bool = False, target: _ProviderTarget | None = None) -> str:
         target = target or self._target_for_task(task_name)
-        self._raise_if_rate_limited(target)
+        wait_for_cooldown = _should_wait_for_rate_limit_cooldown(task_name)
         payload = {
             "model": target.model,
             "messages": messages,
@@ -479,13 +481,22 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
         total_rounds = max(1, int(self.retry_attempts))
         for round_index in range(total_rounds):
             ordered_api_keys = self._ordered_api_keys(target)
+            available_api_keys = [api_key for api_key in ordered_api_keys if _api_key_cooldown_seconds(api_key) <= 0]
+            if available_api_keys:
+                ordered_api_keys = available_api_keys
+            elif wait_for_cooldown:
+                ordered_api_keys = sorted(ordered_api_keys, key=_api_key_cooldown_seconds)
+            elif not wait_for_cooldown:
+                raise self._rate_limit_error(target, _target_rate_limit_cooldown_seconds(target))
             for api_key in ordered_api_keys:
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {api_key}",
                 }
                 try:
-                    await self._wait_for_provider_slot(target)
+                    if wait_for_cooldown:
+                        await self._wait_for_rate_limit_cooldown(target, task_name=task_name, api_key=api_key)
+                    await self._wait_for_provider_slot(target, api_key=api_key, check_rate_limit=not wait_for_cooldown)
                     async with httpx.AsyncClient(timeout=target.timeout_seconds) as client:
                         response = await client.post(url, json=payload, headers=headers)
                         response.raise_for_status()
@@ -515,10 +526,15 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
                         raise last_error from exc
                 except httpx.HTTPStatusError as exc:
                     last_error = _map_provider_http_error(target.provider_name, exc.response)
-                    self._record_rate_limit_if_needed(last_error)
+                    self._record_rate_limit_if_needed(last_error, api_key=api_key)
                     if not _should_try_next_key(last_error):
                         raise last_error from exc
-                    if last_error.failure_kind == "rate_limit" and last_error.retry_after_seconds is None and len(ordered_api_keys) <= 1:
+                    if (
+                        last_error.failure_kind == "rate_limit"
+                        and last_error.retry_after_seconds is None
+                        and len(ordered_api_keys) <= 1
+                        and not wait_for_cooldown
+                    ):
                         raise last_error from exc
                     if len(ordered_api_keys) > 1:
                         continue
@@ -583,7 +599,6 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
         tools: list[dict] | None = None,
     ) -> dict:
         target = self._target_for_task(task_name)
-        self._raise_if_rate_limited(target)
         payload: dict[str, object] = {
             "model": target.model,
             "messages": messages,
@@ -602,13 +617,18 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
         total_rounds = max(1, int(self.retry_attempts))
         for round_index in range(total_rounds):
             ordered_api_keys = self._ordered_api_keys(target)
+            available_api_keys = [api_key for api_key in ordered_api_keys if _api_key_cooldown_seconds(api_key) <= 0]
+            if available_api_keys:
+                ordered_api_keys = available_api_keys
+            else:
+                raise self._rate_limit_error(target, _target_rate_limit_cooldown_seconds(target))
             for api_key in ordered_api_keys:
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {api_key}",
                 }
                 try:
-                    await self._wait_for_provider_slot(target)
+                    await self._wait_for_provider_slot(target, api_key=api_key)
                     async with httpx.AsyncClient(timeout=target.timeout_seconds) as client:
                         response = await client.post(url, json=payload, headers=headers)
                         response.raise_for_status()
@@ -623,7 +643,7 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
                     if round_index >= total_rounds - 1: raise last_error from exc
                 except httpx.HTTPStatusError as exc:
                     last_error = _map_provider_http_error(target.provider_name, exc.response)
-                    self._record_rate_limit_if_needed(last_error)
+                    self._record_rate_limit_if_needed(last_error, api_key=api_key)
                     if not _should_try_next_key(last_error): raise last_error from exc
                     if last_error.failure_kind == "rate_limit" and last_error.retry_after_seconds is None and len(ordered_api_keys) <= 1: raise last_error from exc
                     if len(ordered_api_keys) > 1: continue
@@ -710,12 +730,10 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
         self._api_key_cursor = (cursor + 1) % len(api_keys)
         return [*api_keys[cursor:], *api_keys[:cursor]]
 
-    def _raise_if_rate_limited(self, target: _ProviderTarget) -> None:
-        remaining_seconds = _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL - time.monotonic()
-        if remaining_seconds <= 0:
-            return
+    def _rate_limit_error(self, target: _ProviderTarget, remaining_seconds: float) -> ExternalAIServiceError:
+        remaining_seconds = max(0.0, float(remaining_seconds))
         self._runtime_metrics["rate_limit_short_circuits"] = self._runtime_metrics.get("rate_limit_short_circuits", 0) + 1
-        raise ExternalAIServiceError(
+        return ExternalAIServiceError(
             f"NVIDIA rate limits are cooling down. Retry in {int(remaining_seconds) + 1} second(s).",
             provider=target.provider_name,
             retryable=True,
@@ -724,20 +742,52 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
             retry_after_seconds=remaining_seconds,
         )
 
-    def _record_rate_limit_if_needed(self, error: ExternalAIServiceError) -> None:
+    def _raise_if_rate_limited(self, target: _ProviderTarget, *, api_key: str | None = None) -> None:
+        remaining_seconds = _target_rate_limit_cooldown_seconds(target) if api_key is None else _api_key_cooldown_seconds(api_key)
+        if remaining_seconds <= 0:
+            return
+        raise self._rate_limit_error(target, remaining_seconds)
+
+    def _record_rate_limit_if_needed(self, error: ExternalAIServiceError, *, api_key: str | None = None) -> None:
         global _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL
         if error.failure_kind != "rate_limit":
             return
         cooldown_seconds = _rate_limit_cooldown_seconds(error)
-        _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL = max(_PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL, time.monotonic() + cooldown_seconds)
+        cooldown_until = time.monotonic() + cooldown_seconds
+        if api_key is None:
+            _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL = max(_PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL, cooldown_until)
+        else:
+            current_until = _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL_BY_KEY.get(api_key, 0.0)
+            _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL_BY_KEY[api_key] = max(current_until, cooldown_until)
         self._runtime_metrics["rate_limit_responses"] = self._runtime_metrics.get("rate_limit_responses", 0) + 1
-        self._runtime_events.append("AI provider rate limit cooldown activated; later scan stages will use deterministic fallbacks until it expires.")
+        self._runtime_events.append("AI provider key rate limit cooldown activated; other configured keys may continue handling requests.")
 
-    async def _wait_for_provider_slot(self, target: _ProviderTarget) -> None:
-        global _PROVIDER_NEXT_REQUEST_AT
-        async with _PROVIDER_REQUEST_LOCK:
-            self._raise_if_rate_limited(target)
-            wait_seconds = _PROVIDER_NEXT_REQUEST_AT - time.monotonic()
+    async def _wait_for_rate_limit_cooldown(self, target: _ProviderTarget, *, task_name: str, api_key: str | None = None) -> None:
+        remaining_seconds = _target_rate_limit_cooldown_seconds(target) if api_key is None else _api_key_cooldown_seconds(api_key)
+        if remaining_seconds <= 0:
+            return
+        wait_seconds = min(remaining_seconds, _RATE_LIMIT_MAX_COOLDOWN_SECONDS)
+        self._runtime_metrics["rate_limit_waits"] = self._runtime_metrics.get("rate_limit_waits", 0) + 1
+        logger.info(
+            "AI request waiting for provider rate-limit cooldown | task=%s provider=%s wait_seconds=%.2f",
+            task_name,
+            target.provider_name,
+            wait_seconds,
+        )
+        await asyncio.sleep(wait_seconds)
+
+    async def _wait_for_provider_slot(self, target: _ProviderTarget, *, api_key: str, check_rate_limit: bool = True) -> None:
+        while True:
+            async with _PROVIDER_REQUEST_LOCK:
+                if check_rate_limit:
+                    self._raise_if_rate_limited(target, api_key=api_key)
+                now = time.monotonic()
+                wait_seconds = _PROVIDER_NEXT_REQUEST_AT_BY_KEY.get(api_key, 0.0) - now
+                if wait_seconds <= 0:
+                    interval_seconds = max(0.0, float(self.min_request_interval_seconds))
+                    _PROVIDER_NEXT_REQUEST_AT_BY_KEY[api_key] = now + interval_seconds
+                    return
+
             if wait_seconds > 0:
                 logger.info(
                     "AI request throttled | provider=%s wait_seconds=%.2f",
@@ -745,8 +795,27 @@ class NvidiaSecurityClient(SecurityAnalysisAIClient):
                     wait_seconds,
                 )
                 await asyncio.sleep(wait_seconds)
-            interval_seconds = max(0.0, float(self.min_request_interval_seconds))
-            _PROVIDER_NEXT_REQUEST_AT = time.monotonic() + interval_seconds
+
+
+def _should_wait_for_rate_limit_cooldown(task_name: str) -> bool:
+    normalized = task_name.removesuffix("_json_repair")
+    return normalized in _COOLDOWN_WAIT_TASKS
+
+
+def _api_key_cooldown_seconds(api_key: str) -> float:
+    key_until = _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL_BY_KEY.get(api_key, 0.0)
+    global_until = _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL
+    return max(0.0, max(key_until, global_until) - time.monotonic())
+
+
+def _target_rate_limit_cooldown_seconds(target: _ProviderTarget) -> float:
+    global_remaining = max(0.0, _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL - time.monotonic())
+    key_remaining = [_api_key_cooldown_seconds(api_key) for api_key in target.api_keys]
+    if global_remaining > 0:
+        return global_remaining
+    if key_remaining and all(remaining > 0 for remaining in key_remaining):
+        return min(key_remaining)
+    return 0.0
 
 
 def _coerce_message_text(value) -> str:
