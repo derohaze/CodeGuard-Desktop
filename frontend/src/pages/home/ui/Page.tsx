@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { PanelLeftOpen } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +23,6 @@ import { SettingsScreen } from "@/features/settings";
 import { SIDEBAR_COLLAPSED_STORAGE_KEY, useRuntimeSettings } from "@/features/settings/model/runtimeSettings";
 import { Sidebar } from "@/features/sidebar-navigation";
 import { SuggestFixScreen } from "@/features/suggest-fix";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AnalyticsDashboardScreen } from "@/features/analytics-dashboard";
 import { AuditTrailScreen } from "@/features/audit-trail";
 import { GovernanceCenterScreen } from "@/features/governance-center";
@@ -134,7 +132,6 @@ export default function Page() {
     patchSettings: patchRuntimeSettings,
   } = useRuntimeSettings();
   const sessionWorkspaceTabs = buildSessionWorkspaceTabs(activeSession, screen);
-  const hasElectronTitlebar = typeof window !== "undefined" && typeof window.electronAPI?.versions?.electron === "string";
 
   useEffect(() => {
     if (sessionWorkspaceTabs.length === 0) return;
@@ -1166,7 +1163,12 @@ export default function Page() {
   };
 
   return (
-    <AppShell>
+    <AppShell
+      onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
+      isSidebarCollapsed={isSidebarCollapsed}
+      onNavigateHome={() => handleNavigate("home")}
+      onOpenSettings={() => setView("settings")}
+    >
       {view === "workspace" ? (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
           <Sidebar
@@ -1180,32 +1182,11 @@ export default function Page() {
             onReorderSessions={handleReorderSessions}
             sessionOrder={sessionOrder}
             isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed((current) => !current)}
             onOpenSettings={() => setView("settings")}
           />
-          <div className={`relative flex min-h-0 min-w-0 flex-1 overflow-hidden ${hasElectronTitlebar ? "pt-8" : ""}`}>
-            {isSidebarCollapsed && (
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setIsSidebarCollapsed(false)}
-                    className="app-no-drag absolute left-4 top-4 z-40 rounded-xl border bg-card p-2 text-txt-secondary shadow-sm transition-colors hover:bg-secondary hover:text-txt-primary"
-                    style={{ borderColor: "hsl(var(--border-soft))" }}
-                    aria-label="Show sidebar"
-                  >
-                    <PanelLeftOpen size={16} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  align="start"
-                  sideOffset={8}
-                  className="rounded-xl border border-border-soft bg-surface px-3 py-1.5 text-xs text-txt-primary shadow-md"
-                >
-                  Show sidebar
-                </TooltipContent>
-              </Tooltip>
-            )}
+          <div
+            className={`relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-[#121212] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isSidebarCollapsed ? "rounded-t-[16px]" : "rounded-tl-[16px]"}`}
+          >
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               {sessionWorkspaceTabs.length > 0 && (
                 <SessionWorkspaceTabs
@@ -1220,19 +1201,22 @@ export default function Page() {
           </div>
         </div>
       ) : (
-        <SettingsScreen
-          onBack={() => setView("workspace")}
-          settings={runtimeSettings}
-          isSaving={runtimeSettingsSaving || runtimeSettingsLoading}
-          onPatchSettings={async (patch) => {
-            try {
-              await patchRuntimeSettings(patch);
-            } catch (error) {
-              const message = error instanceof Error ? toAnalystCopy(error.message) : "Unable to save runtime settings.";
-              toast.error(message);
-            }
-          }}
-        />
+        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <SettingsScreen
+            isSidebarCollapsed={isSidebarCollapsed}
+            onBack={() => setView("workspace")}
+            settings={runtimeSettings}
+            isSaving={runtimeSettingsSaving || runtimeSettingsLoading}
+            onPatchSettings={async (patch) => {
+              try {
+                await patchRuntimeSettings(patch);
+              } catch (error) {
+                const message = error instanceof Error ? toAnalystCopy(error.message) : "Unable to save runtime settings.";
+                toast.error(message);
+              }
+            }}
+          />
+        </div>
       )}
       <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => {
         if (!open && !isDeleting) {

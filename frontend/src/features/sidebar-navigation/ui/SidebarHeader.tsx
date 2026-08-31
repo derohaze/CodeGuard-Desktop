@@ -1,40 +1,12 @@
-import { PanelLeftClose } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrandModeHeading } from "@/shared/ui/BrandModeHeading";
 
-export function SidebarHeader({
-  onToggleCollapse,
-}: {
-  onToggleCollapse: () => void;
-}) {
+export function SidebarHeader() {
   return (
-    <div className="px-5 pb-2 pt-5">
-      <div className="relative">
-        <div className="space-y-3 pr-8">
-          <div className="flex items-center gap-2.5">
-            <BrandModeHeading />
-          </div>
-        </div>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <button
-              onClick={onToggleCollapse}
-              className="absolute right-0 top-0 p-1 text-txt-secondary transition-colors hover:text-txt-primary"
-              aria-label="Hide sidebar"
-            >
-              <PanelLeftClose size={17} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent
-            side="bottom"
-            align="end"
-            sideOffset={8}
-            className="rounded-xl border border-border-soft bg-surface px-3 py-1.5 text-xs text-txt-primary shadow-md"
-          >
-            Hide sidebar
-          </TooltipContent>
-        </Tooltip>
+    <div className="px-4 pb-2 pt-4">
+      <div className="flex items-center gap-2">
+        <BrandModeHeading />
       </div>
+      <p className="mt-1 text-[11px] font-medium tracking-wide text-txt-tertiary/80">Security workspace</p>
     </div>
   );
 }

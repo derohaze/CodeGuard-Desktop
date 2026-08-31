@@ -60,7 +60,7 @@ export function HomeScreen({ onStartScan, defaultPreset, defaultScanMode }: Home
   };
 
   return (
-    <div className="hide-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface px-5 pb-4 pt-4 sm:px-6 lg:px-8">
+    <div className="hide-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#121212] px-5 pb-4 pt-4 sm:px-6 lg:px-8">
       <div className="flex min-h-full w-full flex-1 flex-col gap-5">
         <div className="max-w-[760px]">
           <div className="flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.16em] text-txt-tertiary">
@@ -77,10 +77,8 @@ export function HomeScreen({ onStartScan, defaultPreset, defaultScanMode }: Home
           </p>
         </div>
 
-        <div
-          className="flex flex-1 flex-col rounded-2xl border bg-card p-5 shadow-[0_10px_24px_rgba(0,0,0,0.035)]"
-          style={{ borderColor: "hsl(var(--border-soft))" }}
-        >
+        <div className="flex flex-1 flex-col rounded-[16px] border border-white/[0.06] bg-[#1e1e1e] p-5">
+        
           <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] items-start">
             <div className="min-w-0 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -269,10 +267,8 @@ export function HomeScreen({ onStartScan, defaultPreset, defaultScanMode }: Home
             </div>
 
             <div className="min-w-0 flex flex-col space-y-4">
-              <div
-                className="rounded-2xl border bg-card px-5 py-5 shadow-[0_10px_22px_rgba(0,0,0,0.025)]"
-                style={{ borderColor: "hsl(var(--border-soft))" }}
-              >
+              <div className="rounded-[16px] border border-white/[0.06] bg-[#232323] px-5 py-5">
+              
                 <div className="flex items-center gap-2 text-txt-primary">
                   <ShieldCheck size={16} className="text-status-success" />
                   <p className="text-sm font-medium">Current analyst plan</p>
@@ -322,10 +318,8 @@ export function HomeScreen({ onStartScan, defaultPreset, defaultScanMode }: Home
                 </button>
               </div>
 
-              <div
-                className="flex flex-col rounded-2xl border bg-card px-5 py-5 shadow-[0_10px_22px_rgba(0,0,0,0.025)]"
-                style={{ borderColor: "hsl(var(--border-soft))" }}
-              >
+              <div className="flex flex-col rounded-[16px] border border-white/[0.06] bg-[#232323] px-5 py-5">
+              
                   <div className="text-txt-primary">
                     <p className="text-sm font-medium">Recent sources</p>
                     <p className="mt-1 text-[13px] leading-6 text-txt-secondary">

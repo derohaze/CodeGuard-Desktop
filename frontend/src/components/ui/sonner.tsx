@@ -10,26 +10,40 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      position="top-center"
+      position="top-right"
+      closeButton
+      expand={false}
+      visibleToasts={4}
+      gap={8}
       className="toaster group"
       icons={{
-        success: <CheckCircle2 className="size-4.5 text-emerald-600" strokeWidth={2.1} />,
-        error: <CircleAlert className="size-4.5 text-rose-600" strokeWidth={2.1} />,
-        warning: <TriangleAlert className="size-4.5 text-amber-600" strokeWidth={2.1} />,
-        info: <Info className="size-4.5 text-sky-600" strokeWidth={2.1} />,
-        loading: <LoaderCircle className="size-4.5 animate-spin text-[#8b7355]" strokeWidth={2.1} />,
+        success: <CheckCircle2 className="size-3.5 text-emerald-500" strokeWidth={2} />,
+        error: <CircleAlert className="size-3.5 text-rose-500" strokeWidth={2} />,
+        warning: <TriangleAlert className="size-3.5 text-amber-500" strokeWidth={2} />,
+        info: <Info className="size-3.5 text-sky-400" strokeWidth={2} />,
+        loading: <LoaderCircle className="size-3.5 animate-spin text-white/60" strokeWidth={2} />,
       }}
       toastOptions={{
         classNames: {
           toast:
-            "group toast relative min-h-11 rounded-[20px] border-0 px-4 py-2.5 pr-4 group-[.toaster]:bg-background group-[.toaster]:text-foreground shadow-[0_10px_24px_rgba(52,42,28,0.06)]",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-          title: "text-[14px] font-medium tracking-[-0.01em] text-txt-primary",
-          description: "text-[13px] leading-6 text-txt-secondary",
-          icon: "mr-1 shrink-0",
+            "group toast !w-auto !min-w-[300px] !max-w-[380px] relative flex items-center gap-2.5 rounded-[10px] border border-white/[0.08] !bg-[#262626] px-3 py-2.5 pr-8 shadow-[0_8px_24px_rgba(0,0,0,0.45)] !backdrop-blur-none",
+          actionButton: "group-[.toast]:bg-white group-[.toast]:text-black text-[12px] h-7 rounded-md px-3",
+          cancelButton: "group-[.toast]:bg-white/10 group-[.toast]:text-white/70 text-[12px] h-7 rounded-md px-3",
+          title: "!text-[12.5px] !font-medium !leading-none !text-white !tracking-[-0.01em]",
+          description: "!text-[12px] !leading-4 !text-white/60",
+          icon: "!mr-0 shrink-0",
+          closeButton:
+            "!absolute !left-auto !right-1 !top-1/2 !-translate-y-1/2 !bg-transparent !border-0 !shadow-none !text-white/35 hover:!text-white hover:!bg-white/[0.06] !rounded-md !h-6 !w-6 !p-0 !m-0",
         },
+        duration: 4000,
       }}
+      style={
+        {
+          "--normal-bg": "#262626",
+          "--normal-border": "rgba(255,255,255,0.08)",
+          "--normal-text": "#fff",
+        } as React.CSSProperties
+      }
       {...props}
     />
   );

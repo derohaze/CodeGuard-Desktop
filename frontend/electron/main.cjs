@@ -25,14 +25,11 @@ function createWindow() {
     minHeight: MIN_WINDOW_HEIGHT,
     center: true,
     show: false,
-    backgroundColor: '#f8f4ee',
+    backgroundColor: '#1a1a1a',
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#f8f4ee',
-      symbolColor: '#2a241e',
-      height: 32
-    },
+    frame: process.platform === 'win32' ? false : true,
+    roundedCorners: true,
     title: APP_NAME,
     webPreferences: {
       nodeIntegration: false,
@@ -68,6 +65,18 @@ function createWindow() {
     mainWindow.center();
     mainWindow.show();
   });
+
+  const broadcastWindowState = () => {
+    if (!mainWindow) return;
+    mainWindow.webContents.send('window:state-changed', {
+      maximized: mainWindow.isMaximized(),
+    });
+  };
+
+  mainWindow.on('maximize', broadcastWindowState);
+  mainWindow.on('unmaximize', broadcastWindowState);
+  mainWindow.on('enter-full-screen', broadcastWindowState);
+  mainWindow.on('leave-full-screen', broadcastWindowState);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -143,6 +152,35 @@ app.whenReady().then(() => {
     }
 
     return result.filePaths[0];
+  });
+
+  ipcMain.removeHandler('window:minimize');
+  ipcMain.handle('window:minimize', () => {
+    if (!mainWindow) return;
+    mainWindow.minimize();
+  });
+
+  ipcMain.removeHandler('window:toggle-maximize');
+  ipcMain.handle('window:toggle-maximize', () => {
+    if (!mainWindow) return null;
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+    return mainWindow.isMaximized();
+  });
+
+  ipcMain.removeHandler('window:is-maximized');
+  ipcMain.handle('window:is-maximized', () => {
+    return mainWindow ? mainWindow.isMaximized() : false;
+  });
+
+  ipcMain.removeHandler('window:close');
+  ipcMain.handle('window:close', () => {
+    if (!mainWindow) return;
+    // Match the existing behavior of hiding-to-tray on close.
+    mainWindow.hide();
   });
 
   createTray();

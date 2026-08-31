@@ -1,3 +1,15 @@
+export interface ElectronWindowState {
+  maximized: boolean;
+}
+
+export interface ElectronWindowControls {
+  minimize: () => Promise<void>;
+  toggleMaximize: () => Promise<boolean | null>;
+  isMaximized: () => Promise<boolean>;
+  close: () => Promise<void>;
+  onStateChanged: (listener: (state: ElectronWindowState) => void) => () => void;
+}
+
 export interface ElectronAPI {
   platform: string;
   versions: {
@@ -6,6 +18,7 @@ export interface ElectronAPI {
     electron: string;
   };
   pickPath?: (kind: "file" | "folder") => Promise<string | null>;
+  windowControls?: ElectronWindowControls;
 }
 
 declare global {

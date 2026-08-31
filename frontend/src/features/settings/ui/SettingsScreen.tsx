@@ -1,5 +1,13 @@
+import { motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { ArrowLeft, Cog, Scale, ShieldCheck, Zap } from "lucide-react";
+import {
+  ArrowLeft01Icon,
+  BalanceScaleIcon,
+  Settings01Icon,
+  Shield01Icon,
+  ZapIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { RuntimeSettings, UpdateRuntimeSettingsPayload } from "@/shared/api/security";
@@ -9,11 +17,10 @@ interface SettingsScreenProps {
   settings: RuntimeSettings;
   isSaving: boolean;
   onPatchSettings: (patch: UpdateRuntimeSettingsPayload) => void | Promise<void>;
+  isSidebarCollapsed?: boolean;
 }
 
-const sections = [
-  { id: "general", label: "General", icon: Cog },
-];
+const sections = [{ id: "general", label: "General", icon: Settings01Icon }];
 
 const scanModes = [
   { value: "deep", label: "Deep analysis" },
@@ -24,21 +31,21 @@ const scanPresets = [
     id: "safe",
     label: "Safe mode",
     description: "Prioritize high-confidence findings and calmer defaults for steady review flows.",
-    icon: ShieldCheck,
+    icon: Shield01Icon,
     defaultMode: "deep",
   },
   {
     id: "balanced",
     label: "Balanced",
     description: "Keep security coverage broad without turning every analyst run into a noisy sweep.",
-    icon: Scale,
+    icon: BalanceScaleIcon,
     defaultMode: "deep",
   },
   {
     id: "aggressive",
     label: "Aggressive",
     description: "Push deeper heuristics and stricter checks to surface more risky edges earlier.",
-    icon: Zap,
+    icon: ZapIcon,
     defaultMode: "fast",
   },
 ] as const;
@@ -47,66 +54,73 @@ const remediationAttemptOptions = [1, 2, 3, 4, 5];
 const ingestionRpsOptions = [2, 5, 10, 15, 20, 30];
 const ingestionRetryOptions = [1, 2, 3, 4, 5, 6];
 
-export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving }: SettingsScreenProps) {
-  const hasElectronTitlebar = typeof window !== "undefined" && typeof window.electronAPI?.versions?.electron === "string";
-
+export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, isSidebarCollapsed = false }: SettingsScreenProps) {
   return (
-    <div key="settings-screen" className="flex min-h-0 flex-1 bg-surface">
-      <aside className="flex w-[272px] shrink-0 flex-col border-r bg-[#f7f2eb]" style={{ borderColor: "hsl(var(--border-soft))" }}>
-        {hasElectronTitlebar ? <div className="app-drag h-8 border-b" style={{ borderColor: "hsl(var(--border-soft))" }} /> : null}
-        <div className="flex h-12 items-center border-b px-3" style={{ borderColor: "hsl(var(--border-soft))" }}>
-          <button
-            onClick={onBack}
-            className="app-no-drag inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-txt-secondary transition-colors hover:bg-secondary hover:text-txt-primary"
-          >
-            <ArrowLeft size={15} />
-            <span>Back to app</span>
-          </button>
-        </div>
+    <div key="settings-screen" className="flex min-h-0 flex-1 overflow-hidden bg-[#171717]">
+      {/* Left nav — collapsible like workspace sidebar, Codex warm dark */}
+      <div
+        className="relative shrink-0 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
+        style={{ width: isSidebarCollapsed ? 0 : 240 }}
+        aria-hidden={isSidebarCollapsed}
+      >
+        <motion.aside
+          className="absolute inset-y-0 left-0 flex w-[240px] min-h-0 flex-col overflow-hidden bg-[#171717]"
+          initial={false}
+          animate={{ x: isSidebarCollapsed ? -240 : 0, opacity: isSidebarCollapsed ? 0 : 1 }}
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <div className="flex h-[44px] items-center border-b border-white/[0.06] px-3">
+            <button
+              onClick={onBack}
+              className="app-no-drag inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] font-normal text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white/85"
+            >
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.7} color="currentColor" />
+              <span>Back to app</span>
+            </button>
+          </div>
 
-        <div className="space-y-1 px-3 py-4">
-          {sections.map((section) => {
-            const Icon = section.icon;
+          <div className="space-y-0.5 px-2 py-3">
+            {sections.map((section) => {
+              return (
+                <button
+                  key={section.id}
+                  className="flex w-full items-center gap-2 rounded-lg bg-white/[0.08] px-2.5 py-1.5 text-left text-[12.5px] font-medium text-white"
+                >
+                  <HugeiconsIcon icon={section.icon} size={14} strokeWidth={1.7} color="currentColor" className="text-white/70" />
+                  <span>{section.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.aside>
+      </div>
 
-            return (
-              <button
-                key={section.id}
-                className="flex w-full items-center gap-3 rounded-xl bg-card px-3 py-2.5 text-left text-sm text-txt-primary shadow-sm"
-              >
-                <Icon size={16} className="text-txt-primary" />
-                <span className="font-medium">{section.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </aside>
-
-      <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto bg-[#f7f7f7]">
-        <div className="mx-auto flex w-full max-w-[960px] flex-col gap-6 px-10 py-10">
+      {/* Right content — Codex #121212 / card #1e1e1e with page curve like external app (outer page curve) */}
+      <div
+        className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-[#171717] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+          isSidebarCollapsed ? "rounded-t-[16px]" : "rounded-tl-[16px]"
+        }`}
+      >
+        <div className="hide-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#121212]">
+          <div className="mx-auto flex w-full max-w-[860px] flex-col gap-5 px-8 py-7">
           <div className="flex items-center justify-between gap-6">
             <div>
-              <h2 className="text-[32px] font-semibold tracking-[-0.03em] text-txt-primary">General</h2>
-              {isSaving ? <p className="mt-1 text-xs text-txt-tertiary">Saving settings...</p> : null}
+              <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-white">General</h2>
+              {isSaving ? <p className="mt-1 text-[11px] text-white/40">Saving settings…</p> : null}
             </div>
           </div>
 
-          <div
-            className="overflow-hidden rounded-[26px] border bg-card shadow-[0_18px_48px_rgba(0,0,0,0.08)]"
-            style={{ borderColor: "hsl(var(--border-soft))" }}
-          >
-            <div className="border-b px-5 py-5" style={{ borderColor: "hsl(var(--border-soft))" }}>
-              <div className="mb-4">
-                <p className="text-[15px] font-medium text-txt-primary">Analyst preset</p>
-                <p className="mt-1 text-sm leading-6 text-txt-secondary">
-                  Choose the default posture for new analysis sessions.
-                </p>
+          <div className="overflow-hidden rounded-[16px] border border-white/[0.06] bg-[#1e1e1e]">
+            {/* Analyst preset — Codex card style */}
+            <div className="border-b border-white/[0.06] px-4 py-4">
+              <div className="mb-3">
+                <p className="text-[13px] font-medium text-white">Analyst preset</p>
+                <p className="mt-1 text-[12.5px] leading-5 text-white/55">Choose the default posture for new analysis sessions.</p>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-2.5 md:grid-cols-3">
                 {scanPresets.map((preset) => {
-                  const Icon = preset.icon;
                   const active = settings.defaultPreset === preset.id;
-
                   return (
                     <button
                       key={preset.id}
@@ -116,18 +130,23 @@ export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving }: 
                           defaultScanMode: preset.defaultMode,
                         });
                       }}
-                      className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
-                        active ? "bg-[#f8f2e9]" : "bg-[#fcf8f2] hover:bg-[#f8f2e9]"
+                      className={`group rounded-xl border px-3.5 py-3.5 text-left transition-all ${
+                        active
+                          ? "bg-[#2a241e] border-[#c9a86a]/25 shadow-[0_0_0_1px_rgba(201,168,106,0.12)]"
+                          : "bg-[#232323] border-white/[0.06] hover:bg-[#262626] hover:border-white/[0.08]"
                       }`}
-                      style={{ borderColor: active ? "rgba(196, 161, 118, 0.42)" : "hsl(var(--border-soft))" }}
                     >
-                      <div className="flex items-center gap-2 text-txt-primary">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${active ? "bg-card" : "bg-white/70"}`}>
-                          <Icon size={16} strokeWidth={1.9} />
+                      <div className="flex items-center gap-2 text-white">
+                        <div
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                            active ? "bg-white/[0.08] text-white" : "bg-white/[0.06] text-white/70"
+                          }`}
+                        >
+                          <HugeiconsIcon icon={preset.icon} size={13} strokeWidth={1.7} color="currentColor" />
                         </div>
-                        <span className="text-sm font-medium">{preset.label}</span>
+                        <span className="text-[12.5px] font-medium">{preset.label}</span>
                       </div>
-                      <p className="mt-3 text-[13px] leading-6 text-txt-secondary">{preset.description}</p>
+                      <p className="mt-2.5 text-[12px] leading-5 text-white/55">{preset.description}</p>
                     </button>
                   );
                 })}
@@ -258,6 +277,7 @@ export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving }: 
           </div>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -274,20 +294,22 @@ function SettingsRow({
   border?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-6 px-5 py-5 ${border ? "border-b" : ""}`} style={{ borderColor: "hsl(var(--border-soft))" }}>
-      <div className="min-w-0">
-        <p className="text-[15px] font-medium text-txt-primary">{title}</p>
-        <p className="mt-1 text-sm leading-6 text-txt-secondary">{description}</p>
+    <div
+      className={`flex items-center justify-between gap-6 px-4 py-3.5 ${border ? "border-b border-white/[0.06]" : ""}`}
+    >
+      <div className="min-w-0 pr-4">
+        <p className="text-[13px] font-medium leading-none text-white">{title}</p>
+        <p className="mt-1.5 text-[12.5px] leading-5 text-white/55">{description}</p>
       </div>
-      {control}
+      <div className="shrink-0">{control}</div>
     </div>
   );
 }
 
 const selectClassName =
-  "h-11 w-[178px] rounded-xl border bg-[#f4f4f5] text-sm font-medium text-txt-primary focus:ring-0 focus:ring-offset-0";
+  "h-8 w-[152px] rounded-lg border border-white/10 bg-[#2a2a2a] text-[12.5px] font-medium text-white hover:bg-[#303030] focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-white/60";
 
 const selectContentClassName =
-  "rounded-xl border border-border-soft bg-surface text-txt-primary shadow-[0_18px_40px_rgba(0,0,0,0.12)]";
+  "rounded-xl border border-white/10 bg-[#232323] text-white shadow-[0_16px_32px_rgba(0,0,0,0.5)]";
 
-const selectItemClassName = "rounded-lg text-sm focus:bg-secondary focus:text-txt-primary";
+const selectItemClassName = "rounded-md text-[12.5px] focus:bg-white/[0.06] focus:text-white";

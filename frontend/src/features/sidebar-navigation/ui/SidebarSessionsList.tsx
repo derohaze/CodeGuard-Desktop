@@ -1,6 +1,17 @@
 import { useMemo, useState } from "react";
 import { Reorder } from "framer-motion";
-import { Check, Clock3, Ellipsis, FolderOpen, MessageSquareMore, SlidersHorizontal, Sparkles, SquarePen, Trash2 } from "lucide-react";
+import {
+  Clock01Icon,
+  Delete02Icon,
+  Folder01Icon,
+  Message01Icon,
+  MoreHorizontalIcon,
+  PencilEdit01Icon,
+  SlidersHorizontalIcon,
+  SparklesIcon,
+  Tick01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,14 +89,14 @@ export function SidebarSessionsList({
           label: "By repository",
           value: "repo" as const,
           selected: organizeMode === "repo",
-          icon: FolderOpen,
+          icon: Folder01Icon,
           onSelect: () => setOrganizeMode((current) => (current === "repo" ? null : "repo")),
         },
         {
           label: "Chronological list",
           value: "time" as const,
           selected: organizeMode === "time",
-          icon: Clock3,
+          icon: Clock01Icon,
           onSelect: () => setOrganizeMode((current) => (current === "time" ? null : "time")),
         },
       ],
@@ -97,14 +108,14 @@ export function SidebarSessionsList({
           label: "Created",
           value: "created" as const,
           selected: sortMode === "created",
-          icon: SquarePen,
+          icon: PencilEdit01Icon,
           onSelect: () => setSortMode((current) => (current === "created" ? null : "created")),
         },
         {
           label: "Updated",
           value: "updated" as const,
           selected: sortMode === "updated",
-          icon: MessageSquareMore,
+          icon: Message01Icon,
           onSelect: () => setSortMode((current) => (current === "updated" ? null : "updated")),
         },
       ],
@@ -116,14 +127,14 @@ export function SidebarSessionsList({
           label: "All sessions",
           value: "all" as const,
           selected: showMode === "all",
-          icon: FolderOpen,
+          icon: Folder01Icon,
           onSelect: () => setShowMode((current) => (current === "all" ? null : "all")),
         },
         {
           label: "Relevant",
           value: "relevant" as const,
           selected: showMode === "relevant",
-          icon: Sparkles,
+          icon: SparklesIcon,
           onSelect: () => setShowMode((current) => (current === "relevant" ? null : "relevant")),
         },
       ],
@@ -132,15 +143,15 @@ export function SidebarSessionsList({
 
   return (
     <>
-      <div className="flex items-center justify-between px-5 pb-2 pt-4">
-        <span className="text-xs font-medium uppercase tracking-wider text-txt-tertiary">Sessions</span>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-4 pb-2 pt-3">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-txt-tertiary">Sessions</span>
+        <div className="flex items-center gap-1.5">
           <Popover>
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <button
-                    className={`relative rounded-full border p-2 transition-all ${
+                    className={`relative flex h-7 w-7 items-center justify-center rounded-lg border transition-all ${
                       activeFilterCount > 0
                         ? "bg-secondary text-txt-primary shadow-sm"
                         : "bg-secondary/65 text-txt-tertiary hover:bg-secondary hover:text-txt-primary"
@@ -148,9 +159,9 @@ export function SidebarSessionsList({
                     style={{ borderColor: "hsl(var(--border-soft))" }}
                     aria-label="Filter, sort, and organize sessions"
                   >
-                    <SlidersHorizontal size={14} />
+                    <HugeiconsIcon icon={SlidersHorizontalIcon} size={13} strokeWidth={1.7} color="currentColor" />
                     {activeFilterCount > 0 && (
-                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-foreground">
+                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-0.5 text-[9px] font-semibold text-accent-foreground">
                         {activeFilterCount}
                       </span>
                     )}
@@ -169,18 +180,25 @@ export function SidebarSessionsList({
                     <div className="px-2 pb-1 pt-1.5 text-[11px] font-medium text-txt-tertiary">{section.title}</div>
                     <div className="space-y-0.5 pb-1">
                       {section.items.map((item) => {
-                        const Icon = item.icon;
                         return (
                           <button
                             key={item.value}
                             onClick={item.onSelect}
-                            className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors ${
+                            className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left text-[12px] transition-colors ${
                               item.selected ? "bg-secondary text-txt-primary" : "text-txt-primary hover:bg-secondary/65"
                             }`}
                           >
-                            <Icon size={14} className="shrink-0 text-txt-secondary" />
+                            <HugeiconsIcon
+                              icon={item.icon}
+                              size={12}
+                              strokeWidth={1.7}
+                              color="currentColor"
+                              className="shrink-0 text-txt-secondary"
+                            />
                             <span className="min-w-0 flex-1 truncate font-medium">{item.label}</span>
-                            {item.selected && <Check size={14} className="shrink-0 text-txt-primary" />}
+                            {item.selected && (
+                              <HugeiconsIcon icon={Tick01Icon} size={12} strokeWidth={1.7} color="currentColor" className="shrink-0 text-txt-primary" />
+                            )}
                           </button>
                         );
                       })}
@@ -195,11 +213,11 @@ export function SidebarSessionsList({
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="rounded-full border bg-secondary/65 p-2 text-txt-tertiary transition-all hover:bg-secondary hover:text-txt-primary"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border bg-secondary/65 text-txt-tertiary transition-all hover:bg-secondary hover:text-txt-primary"
                     style={{ borderColor: "hsl(var(--border-soft))" }}
                     aria-label="Session actions"
                   >
-                    <Ellipsis size={14} />
+                    <HugeiconsIcon icon={MoreHorizontalIcon} size={13} strokeWidth={1.7} color="currentColor" />
                   </button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -211,9 +229,9 @@ export function SidebarSessionsList({
               <DropdownMenuItem
                 onClick={onDeleteAllSessions}
                 disabled={sessions.length === 0}
-                className="rounded-lg text-status-critical focus:bg-[#fff7f5] focus:text-status-critical"
+                className="rounded-lg text-[12px] text-status-critical focus:bg-[#fff7f5] focus:text-status-critical"
               >
-                <Trash2 size={14} className="mr-2" />
+                <HugeiconsIcon icon={Delete02Icon} size={13} strokeWidth={1.7} color="currentColor" className="mr-2" />
                 Delete all
               </DropdownMenuItem>
             </DropdownMenuContent>
