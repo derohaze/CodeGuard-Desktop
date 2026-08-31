@@ -7,6 +7,20 @@ from app.core.config import get_settings
 from app.core.exceptions import ExternalAIServiceError
 
 
+# Failure kinds that are transient runtime issues (retryable), as opposed to
+# configuration errors (bad model, unauthorized account, rejected request) that
+# retrying will never fix and that the user needs to resolve in Settings.
+_TRANSIENT_FAILURE_KINDS = {
+    "timeout",
+    "connection",
+    "runtime",
+    "rate_limit",
+    "gateway",
+    "upstream",
+    "output_format",
+}
+
+
 _TEXT_SUFFIX_ALLOWLIST = {
     ".py", ".ts", ".tsx", ".js", ".jsx", ".java", ".go", ".rb", ".php", ".cs", ".kt", ".rs",
     ".mjs", ".cjs", ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".env", ".graphql",
@@ -57,11 +71,25 @@ def build_network_policy_note() -> str:
     return "Patch apply, verify, and rollback perform no outbound network actions."
 
 
+def _is_transient(exc: ExternalAIServiceError) -> bool:
+    if exc.failure_kind in _TRANSIENT_FAILURE_KINDS:
+        return True
+    # Explicitly non-retryable provider rejections (bad model, bad auth) are config errors.
+    return exc.retryable and exc.failure_kind not in {"request_rejected", "model_unavailable", "auth"}
+
+
 def sanitize_runtime_error(exc: Exception, *, operation: str) -> str:
     if isinstance(exc, ExternalAIServiceError):
+        if _is_transient(exc):
+            if operation == "scan":
+                return "CodeGuard could not complete the scan because the AI runtime was temporarily unavailable — retry shortly"
+            if operation == "remediation":
+                return "CodeGuard could not complete remediation analysis because the AI runtime was temporarily unavailable — retry shortly"
+            return "CodeGuard could not complete the requested AI operation because the runtime was temporarily unavailable — retry shortly"
+        # Non-transient: surface the real cause so the user can act on it instead of
+        # hiding a model/key misconfiguration behind a "retry shortly" message.
+        cause = str(exc)[:400].strip()
         if operation == "scan":
-            return "CodeGuard could not complete the scan because the configured AI runtime was temporarily unavailable. Retry shortly."
-        if operation == "remediation":
-            return "CodeGuard could not complete remediation analysis because the AI runtime was temporarily unavailable. Retry shortly."
-        return "CodeGuard could not complete the requested AI operation because the runtime was temporarily unavailable. Retry shortly."
-    return "CodeGuard could not complete the requested operation. Retry shortly."
+            return f"CodeGuard could not complete the scan: {cause}. Open Settings → Providers to fix the model or API key"
+        return f"CodeGuard could not complete the requested AI operation: {cause}. Open Settings → Providers to fix the model or API key"
+    return "CodeGuard could not complete the requested operation"

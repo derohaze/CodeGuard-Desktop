@@ -47,7 +47,9 @@ function createWindow() {
   
   if (isDev) {
     mainWindow.loadURL('http://localhost:8080');
-    mainWindow.webContents.openDevTools();
+    // Open DevTools in a detached window (mode: 'detach') so the developer
+    // can close it on its own without closing or affecting the main app.
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }

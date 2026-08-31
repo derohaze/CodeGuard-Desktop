@@ -11,17 +11,17 @@ const scanPresets = [
   {
     id: "safe",
     label: "Safe mode",
-    description: "Strict checks with calmer defaults and fewer false positives.",
+    description: "Strict checks with calmer defaults and fewer false positives",
   },
   {
     id: "balanced",
     label: "Balanced",
-    description: "Best default for most repositories and day-to-day review flows.",
+    description: "Best default for most repositories and day-to-day review flows",
   },
   {
     id: "aggressive",
     label: "Aggressive",
-    description: "Broader heuristics to surface more risky paths early.",
+    description: "Broader heuristics to surface more risky paths early",
   },
 ] as const;
 
@@ -56,11 +56,11 @@ export function useHomeScreen(defaults?: HomeScreenDefaults) {
     () =>
       scanMode === "deep"
         ? targetType === "folder"
-          ? "Deep analysis will traverse the full folder scope, build repository graphs, trace source-to-sink paths, and push coverage toward full review."
-          : "Deep analysis will fully traverse the selected file, segment it into review blocks, and follow nearby calls to build full path evidence."
+          ? "Deep review will traverse the full folder scope, build repository graphs, trace source-to-sink paths, and push coverage toward full review"
+          : "Deep review will fully traverse the selected file, segment it into review blocks, and follow nearby calls to build full path evidence"
         : targetType === "folder"
-          ? "Fast analysis will focus on the highest-risk files and path units first for a quicker partial review."
-          : "Fast analysis will review the selected file quickly, then inspect nearby hotspots for a fast first pass.",
+          ? "Fast review will focus on the highest-risk files and path units first for a quicker partial review"
+          : "Fast review will review the selected file quickly, then inspect nearby hotspots for a fast first pass",
     [scanMode, targetType],
   );
 

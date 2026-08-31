@@ -19,7 +19,7 @@ def build_workflow_summary(session: ScanSessionEntity) -> dict | None:
             state="scanning",
             label="Scan execution",
             summary=session.progress_message or "The repository analysis is still running.",
-            next_action="Wait for analysis to complete before remediation review.",
+            next_action="Wait for review to complete before remediation review.",
             active_controller="executor",
             planner_stage="triage",
             session=session,

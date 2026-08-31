@@ -60,7 +60,7 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
       setExplanation(detail);
     } catch (error) {
       console.error("[CodeGuard] Failed to explain finding", error);
-      toast.error(error instanceof Error ? error.message : "Unable to explain this finding.");
+      toast.error(error instanceof Error ? error.message : "Unable to explain this finding");
     } finally {
       setIsExplanationLoading(false);
     }
@@ -143,7 +143,7 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
               <p className="text-sm font-medium">Simulate attack</p>
             </div>
             <p className="mt-2 text-sm leading-6 text-txt-secondary">
-              Replay the input, execution path, and expected impact from the real analysis result.
+              Replay the input, execution path, and expected impact from the real review result
             </p>
           </motion.button>
         </div>
@@ -170,7 +170,7 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
               </div>
             )}
             {!isExplanationLoading && attackerStory.length === 0 && (
-              <p className="text-sm text-txt-secondary">No attacker narrative is available for this finding.</p>
+              <p className="text-sm text-txt-secondary">No attacker narrative is available for this finding</p>
             )}
             {!isExplanationLoading && attackerStory.length > 2 && (
               <ShowMore className="mt-4" onClick={() => setShowFullAttackerStory((current) => !current)}>
@@ -192,17 +192,17 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 grid gap-3 md:grid-cols-3">
             <SimulationCard
               label="Input"
-              value={isExplanationLoading ? "Generating attacker input simulation..." : explanation?.requestExample || "No generated attacker input available yet."}
+              value={isExplanationLoading ? "Generating attacker input simulation..." : explanation?.requestExample || "No generated attacker input available yet"}
               tone="neutral"
             />
             <SimulationCard
               label="Execution"
-              value={isExplanationLoading ? "Tracing the exploit execution path..." : explanation?.executionPath || "No generated execution path available yet."}
+              value={isExplanationLoading ? "Tracing the exploit execution path..." : explanation?.executionPath || "No generated execution path available yet"}
               tone="warning"
             />
             <SimulationCard
               label="Result"
-              value={isExplanationLoading ? "Estimating exploit impact..." : explanation?.exploitScenario || "No generated exploit impact is available yet."}
+              value={isExplanationLoading ? "Estimating exploit impact..." : explanation?.exploitScenario || "No generated exploit impact is available yet"}
               tone="danger"
             />
           </motion.div>
@@ -285,9 +285,9 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
               <DataFlowGraph steps={explanation?.attackSteps} />
               <Panel>
                 <div className="grid gap-3 md:grid-cols-3">
-                  <StoryMiniCard icon={CircleAlert} label="Input" value={explanation?.entryPoint || "Generate the attacker explanation to inspect the real input path."} />
-                  <StoryMiniCard icon={Zap} label="Propagation" value={explanation?.executionPath || "Generate the attacker explanation to inspect the propagation path."} tone="warning" />
-                  <StoryMiniCard icon={ShieldX} label="Impact" value={explanation?.impact || "Generate the attacker explanation to inspect the resulting impact."} tone="danger" />
+                  <StoryMiniCard icon={CircleAlert} label="Input" value={explanation?.entryPoint || "Generate the attacker explanation to inspect the real input path"} />
+                  <StoryMiniCard icon={Zap} label="Propagation" value={explanation?.executionPath || "Generate the attacker explanation to inspect the propagation path"} tone="warning" />
+                  <StoryMiniCard icon={ShieldX} label="Impact" value={explanation?.impact || "Generate the attacker explanation to inspect the resulting impact"} tone="danger" />
                 </div>
               </Panel>
             </div>
@@ -297,7 +297,7 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
             <div className="space-y-4">
               <Panel>
                 <p className="text-sm leading-7 text-txt-secondary">
-                  {explanation?.exploitScenario || "Generate the attacker explanation to view the code-aware exploit narrative for this finding."}
+                  {explanation?.exploitScenario || "Generate the attacker explanation to view the code-aware exploit narrative for this finding"}
                 </p>
               </Panel>
 
@@ -307,9 +307,9 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
                   <span className="text-xs text-txt-tertiary">Cause to effect</span>
                 </div>
                 <div className="space-y-3">
-                  <ExplainRow label="Cause" value={explanation?.summary || "Generate the attacker explanation to inspect the root cause."} />
-                  <ExplainRow label="Boundary" value={explanation?.executionPath || "Generate the attacker explanation to inspect the trust-boundary crossing."} />
-                  <ExplainRow label="Outcome" value={explanation?.impact || "Generate the attacker explanation to inspect the exploit outcome."} tone="danger" />
+                  <ExplainRow label="Cause" value={explanation?.summary || "Generate the attacker explanation to inspect the root cause"} />
+                  <ExplainRow label="Boundary" value={explanation?.executionPath || "Generate the attacker explanation to inspect the trust-boundary crossing"} />
+                  <ExplainRow label="Outcome" value={explanation?.impact || "Generate the attacker explanation to inspect the exploit outcome"} tone="danger" />
                   {explanation?.payloadExample ? <ExplainRow label="Payload" value={explanation.payloadExample} /> : null}
                 </div>
               </Panel>

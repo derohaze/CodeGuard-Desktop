@@ -530,3 +530,17 @@ The best solution solves the real problem, preserves system integrity,
 minimizes risk, and leaves the codebase in better shape than it was found.
 
 Not more ambitious. Better.
+---
+
+# 14. Copy Convention — No Trailing Period
+
+Project-wide hard rule for ALL user-facing text (UI copy, toasts, alerts, buttons,
+placeholders, status notes, documentation shown to users, model/provider descriptions):
+
+- No user-facing sentence or label may end with a period (".")
+- Write copy without terminal punctuation: "Enter your API key", "No models match that filter"
+- Keep internal code comments and API error messages free of trailing periods too, when
+  those messages can surface in the UI (they use toAnalystCopy on the frontend)
+- Ellipses ("…") are allowed for loading states and are not periods
+
+Apply this to any string that a user can see. When in doubt, drop the period.

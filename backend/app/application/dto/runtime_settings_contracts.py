@@ -10,13 +10,10 @@ class RuntimeSettingsResponse(BaseModel):
     auto_open_results: bool
     remember_sidebar_state: bool
     motion_profile: Literal["fluid", "reduced", "instant"]
-    theme: Literal["light", "system"]
+    theme: Literal["light", "dark", "system"]
     surface_contrast: Literal["soft", "standard"]
     remediation_max_attempts: int = Field(ge=1, le=5)
     remediation_reuse_explanation: bool
-    external_ingestion_max_rps: int = Field(ge=1, le=100)
-    external_ingestion_retry_attempts: int = Field(ge=1, le=10)
-    external_ingestion_backoff_seconds: float = Field(ge=0.1, le=30.0)
     ai_provider: str | None = Field(default=None, description="Active provider id")
     ai_model: str | None = Field(default=None, description="Selected model id")
     ai_base_url: str | None = Field(default=None, description="Custom base URL")
@@ -31,13 +28,10 @@ class UpdateRuntimeSettingsRequest(BaseModel):
     auto_open_results: bool | None = None
     remember_sidebar_state: bool | None = None
     motion_profile: Literal["fluid", "reduced", "instant"] | None = None
-    theme: Literal["light", "system"] | None = None
+    theme: Literal["light", "dark", "system"] | None = None
     surface_contrast: Literal["soft", "standard"] | None = None
     remediation_max_attempts: int | None = Field(default=None, ge=1, le=5)
     remediation_reuse_explanation: bool | None = None
-    external_ingestion_max_rps: int | None = Field(default=None, ge=1, le=100)
-    external_ingestion_retry_attempts: int | None = Field(default=None, ge=1, le=10)
-    external_ingestion_backoff_seconds: float | None = Field(default=None, ge=0.1, le=30.0)
     ai_provider: str | None = Field(default=None, description="Provider id: openai, anthropic, deepseek, gemini, grok, nvidia, custom")
     ai_api_key: str | None = Field(default=None, description="Plain API key to encrypt and store")
     ai_base_url: str | None = Field(default=None, description="Base URL for custom provider")

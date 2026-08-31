@@ -56,7 +56,7 @@ export function RepoOverviewScreen({
               <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-txt-tertiary">Repo overview</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-txt-primary">{session.session.repo}</h2>
               <p className="mt-2 text-sm leading-6 text-txt-secondary">
-                {session.session.repositorySummary || "This surface summarizes repository structure, framework signals, graph hints, and security segmentation for the active security run."}
+                {session.session.repositorySummary || "This surface summarizes repository structure, framework signals, graph hints, and security segmentation for the active security run"}
               </p>
             </div>
             <span className="shrink-0 whitespace-nowrap rounded-full bg-[#eeeeee] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-txt-secondary">
@@ -109,13 +109,13 @@ export function RepoOverviewScreen({
             icon={GitBranch}
             label="Data pressure"
             value={`${hotspotSummary.dataZones} hotspot(s)`}
-            note="Input and sink pressure derived from the security registry."
+            note="Input and sink pressure derived from the security registry"
           />
           <OverviewCard
             icon={FileStack}
             label="Coverage pressure"
             value={`${hotspotSummary.coverageZones} hotspot(s)`}
-            note="Coverage gaps still affect repository-wide trust."
+            note="Coverage gaps still affect repository-wide trust"
           />
         </section>
 
@@ -136,13 +136,13 @@ export function RepoOverviewScreen({
             icon={GitBranch}
             label="Graph + segmentation"
             value={`${ledgerSummary.graphItems + ledgerSummary.segmentationItems} item(s)`}
-            note="Service graph and segmentation signals remain active."
+            note="Service graph and segmentation signals remain active"
           />
           <OverviewCard
             icon={FileStack}
             label="Framework footprint"
             value={`${ledgerSummary.frameworkItems} item(s)`}
-            note="Framework signal inventory used to scope future remediation."
+            note="Framework signal inventory used to scope future remediation"
           />
         </section>
 
@@ -215,12 +215,12 @@ export function RepoOverviewScreen({
             ))}
             {dedupedRepoHotspotFeed?.length === 0 && (
               <p className="text-sm leading-6 text-txt-secondary">
-                No cross-session repository hotspot remains active in the current workspace window.
+                No cross-session repository hotspot remains active in the current workspace window
               </p>
             )}
             {dedupedRepoHotspotFeed === null && (
               <p className="text-sm leading-6 text-txt-secondary">
-                Workspace hotspot feed is not available. Current-run repository hotspots remain visible below.
+                Workspace hotspot feed is not available. Current-run repository hotspots remain visible below
               </p>
             )}
           </div>
@@ -254,7 +254,7 @@ export function RepoOverviewScreen({
             ))}
             {hotspots.length === 0 && (
               <p className="text-sm leading-6 text-txt-secondary">
-                No repository hotspot remains active for the current run.
+                No repository hotspot remains active for the current run
               </p>
             )}
           </div>
@@ -288,7 +288,7 @@ export function RepoOverviewScreen({
             ))}
             {ledgerItems.length === 0 && (
               <p className="text-sm leading-6 text-txt-secondary">
-                No repo intelligence ledger entries are active for the current run.
+                No repo intelligence ledger entries are active for the current run
               </p>
             )}
           </div>
@@ -333,7 +333,7 @@ function OverviewTable({
     <section className="rounded-2xl border bg-card px-5 py-4 shadow-card" style={{ borderColor: "hsl(var(--border-soft))" }}>
       <p className="text-sm font-semibold text-txt-primary">{title}</p>
       {rows.length === 0 ? (
-        <p className="mt-3 text-sm leading-6 text-txt-secondary">No captured data for this section in the current run.</p>
+        <p className="mt-3 text-sm leading-6 text-txt-secondary">No captured data for this section in the current run</p>
       ) : (
         <div className="mt-3 space-y-2">
           {rows.map((row) => (

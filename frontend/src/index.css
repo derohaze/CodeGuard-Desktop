@@ -64,6 +64,64 @@
     --status-disabled: 0 0% 42%;
   }
 
+  /* Light theme — Claude-style neutral palette (beige sidebar, white content). */
+  :root[data-theme="light"] {
+    color-scheme: light;
+
+    --background: 0 0% 99%;
+    --foreground: 0 0% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+
+    --primary: 0 0% 12%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 22%;
+
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 44%;
+
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 14%;
+
+    --destructive: 358 60% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 89%;
+    --input: 0 0% 84%;
+    --ring: 0 0% 58%;
+
+    /* Custom tokens — sidebar beige, pages white */
+    --workspace: 0 0% 98%;
+    --surface: 0 0% 100%;
+    --surface-sidebar: 40 22% 97%;
+    --surface-secondary: 0 0% 95%;
+    --surface-code: 0 0% 96%;
+    --surface-dot: 0 0% 87%;
+
+    --text-primary: 0 0% 14%;
+    --text-secondary: 0 0% 41%;
+    --text-tertiary: 0 0% 50%;
+    --text-placeholder: 0 0% 56%;
+
+    --border-primary: 0 0% 84%;
+    --border-soft: 0 0% 89%;
+
+    --status-success: 150 35% 34%;
+    --status-success-bg: 150 45% 94%;
+    --status-critical: 358 65% 52%;
+    --status-critical-bg: 358 70% 95%;
+    --status-high: 32 60% 42%;
+    --status-high-bg: 32 70% 94%;
+    --status-progress: 210 60% 46%;
+    --status-disabled: 0 0% 55%;
+  }
+
   :root[data-surface-contrast="standard"] {
     --surface: 0 0% 15%;
     --surface-sidebar: 0 0% 10%;
@@ -228,6 +286,125 @@ the many feature files that use arbitrary-value colors. */
   /* borders -> dark */
   .border-\[\#d4d4d4\] { border-color: hsl(0 0% 28%); }
   .border-\[\#ddd1bf\] { border-color: hsl(36 12% 22%); }
+}
+
+/* Light-mode remap — the inverse of the dark remap above.
+   Near-black surfaces that components hardcode become Claude-style light
+   neutrals (beige sidebar, white pages), while the warm-light tiles that
+   dark mode overrode return to their native light values. The white text/
+   border/overlay utilities flip to dark equivalents so the same chrome
+   reads correctly on light backgrounds. Scoped under [data-theme="light"]
+   so specificity beats the default dark-mode (and global) overrides. */
+@layer utilities {
+  :root[data-theme="light"] .bg-\[\#1a1a1a\] { background-color: #f7f6f2; }
+  :root[data-theme="light"] .bg-\[\#171717\] { background-color: #f7f6f2; }
+  :root[data-theme="light"] .bg-\[\#121212\] { background-color: #faf9f6; }
+  :root[data-theme="light"] .bg-\[\#1e1e1e\] { background-color: #ffffff; }
+  :root[data-theme="light"] .bg-\[\#232323\] { background-color: #f5f4ef; }
+  :root[data-theme="light"] .bg-\[\#2a2a2a\] { background-color: #ffffff; }
+  :root[data-theme="light"] .bg-\[\#303030\] { background-color: #efeee8; }
+  :root[data-theme="light"] .bg-\[\#262626\] { background-color: #ffffff; }
+  :root[data-theme="light"] .bg-\[\#2a241e\] { background-color: #f1e8d8; }
+  /* surfaces that must stay dark (red close hover restores below) */
+  :root[data-theme="light"] .bg-\[\#3a3a3a\] { background-color: #3a3a3a; }
+  :root[data-theme="light"] .bg-\[\#c42b1c\] { background-color: #c42b1c; }
+  :root[data-theme="light"] .bg-\[\#1e1b16\] { background-color: #1e1b16; }
+
+  /* restore native light tiles that dark mode dark-mapped */
+  :root[data-theme="light"] .bg-\[\#f7f7f7\] { background-color: #f7f7f7; }
+  :root[data-theme="light"] .bg-\[\#f4f4f5\] { background-color: #f4f4f5; }
+  :root[data-theme="light"] .bg-\[\#eeeeee\] { background-color: #eeeeee; }
+  :root[data-theme="light"] .bg-\[\#f2f2f2\] { background-color: #f2f2f2; }
+  :root[data-theme="light"] .bg-\[\#e5e5e5\] { background-color: #e5e5e5; }
+  :root[data-theme="light"] .bg-\[\#d4d4d4\] { background-color: #d4d4d4; }
+  :root[data-theme="light"] .bg-\[\#ebe3d5\] { background-color: #ebe3d5; }
+  :root[data-theme="light"] .bg-\[\#f6efe6\] { background-color: #f6efe6; }
+  :root[data-theme="light"] .bg-\[\#eee3d5\] { background-color: #eee3d5; }
+  :root[data-theme="light"] .bg-\[\#f7f3eb\] { background-color: #f7f3eb; }
+  :root[data-theme="light"] .bg-\[\#f7f2eb\] { background-color: #f7f2eb; }
+  :root[data-theme="light"] .bg-\[\#fcf8f2\] { background-color: #fcf8f2; }
+  :root[data-theme="light"] .bg-\[\#f8f2e9\] { background-color: #f8f2e9; }
+  :root[data-theme="light"] .bg-\[\#f4ede4\] { background-color: #f4ede4; }
+  :root[data-theme="light"] .bg-\[\#f4efe6\] { background-color: #f4efe6; }
+  :root[data-theme="light"] .bg-\[\#efe8de\] { background-color: #efe8de; }
+  :root[data-theme="light"] .bg-\[\#ece3d6\] { background-color: #ece3d6; }
+  :root[data-theme="light"] .bg-\[\#ebe6d8\] { background-color: #ebe6d8; }
+  :root[data-theme="light"] .bg-\[\#f3ede3\] { background-color: #f3ede3; }
+  :root[data-theme="light"] .bg-\[\#ddd2c2\] { background-color: #ddd2c2; }
+  :root[data-theme="light"] .bg-\[\#f6fbf4\] { background-color: #f6fbf4; }
+  :root[data-theme="light"] .bg-\[\#f7fbf7\] { background-color: #f7fbf7; }
+  :root[data-theme="light"] .bg-\[\#fff7f5\] { background-color: #fff7f5; }
+  :root[data-theme="light"] .bg-\[\#fff6f4\] { background-color: #fff6f4; }
+  :root[data-theme="light"] .bg-\[\#fff1ee\] { background-color: #fff1ee; }
+  :root[data-theme="light"] .bg-\[\#fff1ec\] { background-color: #fff1ec; }
+  :root[data-theme="light"] .bg-\[\#fff8f6\] { background-color: #fff8f6; }
+  :root[data-theme="light"] .bg-\[\#faece8\] { background-color: #faece8; }
+  :root[data-theme="light"] .bg-\[\#fde5df\] { background-color: #fde5df; }
+  :root[data-theme="light"] .bg-\[\#fff9f6\] { background-color: #fff9f6; }
+  :root[data-theme="light"] .bg-\[\#fff6ef\] { background-color: #fff6ef; }
+  :root[data-theme="light"] .bg-\[\#fbf6e8\] { background-color: #fbf6e8; }
+
+  /* restore native light text and borders that dark mode brightened */
+  :root[data-theme="light"] .text-\[\#1e1b16\] { color: #1e1b16; }
+  :root[data-theme="light"] .text-\[\#525252\] { color: #525252; }
+  :root[data-theme="light"] .text-\[\#666666\] { color: #666666; }
+  :root[data-theme="light"] .text-\[\#8a8276\] { color: #8a8276; }
+  :root[data-theme="light"] .text-\[\#9a9184\] { color: #9a9184; }
+  :root[data-theme="light"] .text-\[\#6d655c\] { color: #6d655c; }
+  :root[data-theme="light"] .text-\[\#9f5c53\] { color: #9f5c53; }
+  :root[data-theme="light"] .text-\[\#a76924\] { color: #a76924; }
+  :root[data-theme="light"] .text-\[\#bf6e21\] { color: #bf6e21; }
+  :root[data-theme="light"] .text-\[\#94652a\] { color: #94652a; }
+  :root[data-theme="light"] .text-\[\#8a5a24\] { color: #8a5a24; }
+  :root[data-theme="light"] .text-\[\#8b7355\] { color: #8b7355; }
+  :root[data-theme="light"] .text-\[\#9f9587\] { color: #9f9587; }
+  :root[data-theme="light"] .text-\[\#f6efe6\] { color: #6b6255; }
+  :root[data-theme="light"] .text-\[\#e8dccd\] { color: #857a6b; }
+  :root[data-theme="light"] .text-\[\#cbb8a5\] { color: #a4947f; }
+  :root[data-theme="light"] .border-\[\#d4d4d4\] { border-color: #d4d4d4; }
+  :root[data-theme="light"] .border-\[\#ddd1bf\] { border-color: #ddd1bf; }
+
+  /* text-white -> dark (base then alpha, so hierarchy is preserved) */
+  :root[data-theme="light"] .text-white { color: #1a1a1a; }
+  :root[data-theme="light"] .text-white\/90 { color: rgba(26, 26, 26, 0.9); }
+  :root[data-theme="light"] .text-white\/85 { color: rgba(26, 26, 26, 0.85); }
+  :root[data-theme="light"] .text-white\/80 { color: rgba(26, 26, 26, 0.8); }
+  :root[data-theme="light"] .text-white\/70 { color: rgba(26, 26, 26, 0.7); }
+  :root[data-theme="light"] .text-white\/65 { color: rgba(26, 26, 26, 0.65); }
+  :root[data-theme="light"] .text-white\/60 { color: rgba(26, 26, 26, 0.6); }
+  :root[data-theme="light"] .text-white\/55 { color: rgba(26, 26, 26, 0.55); }
+  :root[data-theme="light"] .text-white\/50 { color: rgba(26, 26, 26, 0.5); }
+  :root[data-theme="light"] .text-white\/40 { color: rgba(26, 26, 26, 0.4); }
+  :root[data-theme="light"] .text-white\/35 { color: rgba(26, 26, 26, 0.35); }
+  :root[data-theme="light"] .text-white\/30 { color: rgba(26, 26, 26, 0.3); }
+  :root[data-theme="light"] .text-white\/25 { color: rgba(26, 26, 26, 0.25); }
+  :root[data-theme="light"] .text-white\/20 { color: rgba(26, 26, 26, 0.2); }
+  :root[data-theme="light"] .placeholder\:text-white\/30 { color: rgba(26, 26, 26, 0.3); }
+  :root[data-theme="light"] .hover\:text-white\/90:hover { color: rgba(26, 26, 26, 0.9); }
+  :root[data-theme="light"] .hover\:text-white\/85:hover { color: rgba(26, 26, 26, 0.85); }
+  :root[data-theme="light"] .hover\:text-white\/60:hover { color: rgba(26, 26, 26, 0.6); }
+  :root[data-theme="light"] .hover\:text-white:hover { color: #1a1a1a; }
+  :root[data-theme="light"] .focus\:text-white:focus { color: #1a1a1a; }
+
+  /* white borders -> soft light neutral */
+  :root[data-theme="light"] .border-white\/20 { border-color: #cfccc6; }
+  :root[data-theme="light"] .border-white\/10 { border-color: #e0ded8; }
+  :root[data-theme="light"] .border-white\/\[0\.08\] { border-color: #e5e3dd; }
+  :root[data-theme="light"] .border-white\/\[0\.07\] { border-color: #e5e3dd; }
+  :root[data-theme="light"] .border-white\/\[0\.06\] { border-color: #e9e7e1; }
+  :root[data-theme="light"] .border-white\/\[0\.05\] { border-color: #ebe9e3; }
+
+  /* white overlays -> dark subtle overlays (hover/active states) */
+  :root[data-theme="light"] .bg-white\/10 { background-color: rgba(28, 25, 20, 0.1); }
+  :root[data-theme="light"] .bg-white\/\[0\.08\] { background-color: rgba(28, 25, 20, 0.08); }
+  :root[data-theme="light"] .bg-white\/\[0\.06\] { background-color: rgba(28, 25, 20, 0.06); }
+  :root[data-theme="light"] .bg-white\/\[0\.04\] { background-color: rgba(28, 25, 20, 0.04); }
+  :root[data-theme="light"] .bg-white\/\[0\.03\] { background-color: rgba(28, 25, 20, 0.03); }
+
+  /* keep white text on surfaces that intentionally stay dark */
+  :root[data-theme="light"] .bg-\[\#1e1b16\] { color: #ffffff; }
+  :root[data-theme="light"] .hover\:bg-\[\#29241d\]:hover { color: #ffffff; }
+  :root[data-theme="light"] .hover\:bg-\[\#c42b1c\]:hover { color: #ffffff; }
 }
 
 @keyframes grid-pulse {

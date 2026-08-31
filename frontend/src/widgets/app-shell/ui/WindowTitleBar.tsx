@@ -219,7 +219,7 @@ export function WindowTitleBar({ controls, onToggleSidebar, isSidebarCollapsed, 
   const handleSelectAll = useCallback(() => document.execCommand("selectAll"), []);
 
   const fileItems: MenuItemDef[] = [
-    { type: "item", label: "New Analysis", shortcut: "Ctrl+N", onClick: onNavigateHome },
+    { type: "item", label: "New Review", shortcut: "Ctrl+N", onClick: onNavigateHome },
     { type: "item", label: "Open Folder…", shortcut: "Ctrl+O", onClick: onNavigateHome },
     { type: "item", label: "Open File…", shortcut: "Ctrl+Shift+O", onClick: onNavigateHome },
     { type: "separator" },

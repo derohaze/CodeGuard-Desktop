@@ -13,6 +13,7 @@ from app.domain.repositories.scan_job_repository import ScanJobRepository
 from app.domain.repositories.scan_repository import ScanSessionRepository
 from app.domain.services.ai_client import SecurityAnalysisAIClient
 from app.infrastructure.ai.agents.detection_agent import DetectionAgent
+from app.infrastructure.ai.provider_factory import build_ai_client_from_runtime_config
 from app.infrastructure.services.workflow.workflow_persistence import WorkflowPersistenceService
 from app.infrastructure.services.scan.coverage_calculation import build_progress_state, calculate_progress_metrics
 from app.infrastructure.services.scan.duplicate_clustering import cluster_findings
@@ -51,6 +52,7 @@ from app.infrastructure.services.scan.scan_modes import ScanModeConfig, get_scan
 from app.infrastructure.services.scan.segmentation_planning import build_scan_work_units
 from app.infrastructure.services.scan.risk_prioritization import prioritize_review_queue
 from app.infrastructure.services.repository.source_sink_registry import build_source_sink_registry
+from app.infrastructure.settings.runtime_settings_service import RuntimeSettingsService
 
 logger = logging.getLogger("codeguard.scan")
 
@@ -76,11 +78,11 @@ def create_initial_session(source_path: str, target_type: str, preset: str, scan
         scan_mode="fast" if scan_mode == "fast" else "deep",
         status="queued",
         progress=0,
-        progress_message="Queued for analysis",
+        progress_message="Queued for review",
         current_phase="Queued",
         elapsed_seconds=0,
         preview="Scan is queued and will start shortly.",
-        progress_logs=["Queued the selected source for security analysis."],
+        progress_logs=["Queued the selected source for code review."],
         scan_plan={
             "scan_mode": "fast" if scan_mode == "fast" else "deep",
             "mode_label": "Fast Scan" if scan_mode == "fast" else "Deep Scan",
@@ -201,16 +203,35 @@ class ScanExecutionService:
         job_repository: ScanJobRepository | None = None,
         workflow_persistence: WorkflowPersistenceService | None = None,
         scan_lock_manager: ScanLockManager | None = None,
+        runtime_settings_service: RuntimeSettingsService | None = None,
     ) -> None:
         self.repository = repository
         self.ai_client = ai_client
         self.job_repository = job_repository
         self.workflow_persistence = workflow_persistence
         self.scan_lock_manager = scan_lock_manager
+        self.runtime_settings_service = runtime_settings_service
         self._analysis_cache: dict[str, dict] = {}
 
     async def submit(self, session_id: str, job_id: str | None = None) -> None:
         asyncio.create_task(self.run(session_id, job_id=job_id))
+
+    async def _resolve_ai_client(self) -> SecurityAnalysisAIClient:
+        if self.runtime_settings_service is None:
+            return self.ai_client
+        config = await self.runtime_settings_service.get_ai_client_config()
+        if config is None:
+            return self.ai_client
+        try:
+            return build_ai_client_from_runtime_config(config)
+        except ExternalAIServiceError:
+            # Unsupported provider or invalid saved config: fail the scan with the
+            # honest reason instead of silently running on env settings the user
+            # did not choose
+            raise
+        except Exception as exc:
+            logger.warning("Runtime AI config could not be built; using the env-configured client", exc_info=exc)
+            return self.ai_client
 
     async def run(self, session_id: str, job_id: str | None = None) -> None:
         session = await self.repository.get_by_id(session_id)
@@ -229,13 +250,15 @@ class ScanExecutionService:
                     owner=job.lock_owner,
                 )
                 await self.scan_lock_manager.refresh_submission_locks(lock_lease)
+        ai_client = self.ai_client
         try:
-            getattr(self.ai_client, "reset_runtime_state", lambda: None)()
-            detection_agent = DetectionAgent(self.ai_client)
+            ai_client = await self._resolve_ai_client()
+            getattr(ai_client, "reset_runtime_state", lambda: None)()
+            detection_agent = DetectionAgent(ai_client)
             source = Path(session.source_path)
             source_root = source if source.is_dir() else source.parent
             mode_config = get_scan_mode_config(session.scan_mode)
-            logs.append("DetectionAgent activated for repository mapping, path review, and finding validation.")
+            logs.append("DetectionAgent activated for repository mapping, path review, and finding validation")
 
             if job_id and self.job_repository is not None:
                 await self._update_job(
@@ -326,7 +349,7 @@ class ScanExecutionService:
                         "native_index": native_index,
                     },
                 )
-                logs.append("Built fresh repository graph and path-tracing artifacts.")
+                logs.append("Built fresh repository graph and path-tracing artifacts")
             else:
                 repository_artifacts = cached_analysis["repository_artifacts"]
                 repository_graph = cached_analysis["repository_graph"]
@@ -342,7 +365,7 @@ class ScanExecutionService:
                     int(native_index.get("files_indexed", 0) or 0),
                     int(native_index.get("elapsed_ms", 0) or 0),
                 )
-                logs.append("Reused incremental analysis cache for repository graph and path tracing.")
+                logs.append("Reused incremental analysis cache for repository graph and path tracing")
             excluded_review_file_count = sum(1 for item in file_segments if int(item.get("block_count", 0)) == 0)
             heuristic_candidates = await asyncio.to_thread(collect_heuristic_candidates, files, source_root)
             heuristic_candidates.extend(codeql_lite_findings)
@@ -355,7 +378,7 @@ class ScanExecutionService:
                     f"({native_index.get('files_indexed', 0)} files in {native_index.get('elapsed_ms', 0)} ms)."
                 )
             else:
-                logs.append(f"Rust native indexer unavailable ({native_index.get('reason', 'unknown')}); Python analysis continued.")
+                logs.append(f"Rust native indexer unavailable ({native_index.get('reason', 'unknown')}); Python review continued.")
             if collection_stats.get("truncated"):
                 logs.append(
                     "Repository indexing reached the enterprise safety budget; analysis continues on the prioritized file set."
@@ -465,7 +488,7 @@ class ScanExecutionService:
                     },
                     preset=session.preset,
                 )
-                self._append_runtime_events(logs)
+                self._append_runtime_events(logs, ai_client)
             except ExternalAIServiceError as exc:
                 if not exc.retryable:
                     raise
@@ -476,7 +499,7 @@ class ScanExecutionService:
                     traced_paths=traced_paths,
                     framework_profile=framework_profile,
                 )
-                logs.append("Repository mapping AI step was unavailable; using deterministic fallback map.")
+                logs.append("Repository mapping AI step was unavailable; using deterministic fallback map")
 
             if repository_map.get("review_note"):
                 logs.append(repository_map["review_note"])
@@ -666,7 +689,7 @@ class ScanExecutionService:
                         total_batches=total_batches,
                         preset=session.preset,
                     )
-                    self._append_runtime_events(logs)
+                    self._append_runtime_events(logs, ai_client)
                     if review.get("review_note"):
                         logs.append(review["review_note"])
                     if review.get("repository_summary") and not repository_summary:
@@ -721,7 +744,7 @@ class ScanExecutionService:
                         "AI review was temporarily unavailable; continuing with heuristic signals only."
                     )
                     logger.warning("AI review failed during path review; continuing without AI batch", exc_info=exc)
-                    self._append_runtime_events(logs)
+                    self._append_runtime_events(logs, ai_client)
                     break
 
             heuristic_candidates = attach_path_context(heuristic_candidates, traced_paths)
@@ -776,7 +799,7 @@ class ScanExecutionService:
                 mode_config=mode_config,
                 logs=logs,
             )
-            self._append_runtime_events(logs)
+            self._append_runtime_events(logs, ai_client)
             merged_validated_findings = cluster_findings(merge_validated_findings(
                 validated.get("findings", []),
                 heuristic_candidates,
@@ -805,7 +828,7 @@ class ScanExecutionService:
                 if validated.get("findings"):
                     logs.append(validated["review_note"])
                 elif merged_validated_findings:
-                    logs.append("The validator rejected speculative candidates, but deterministic high-confidence local findings were retained.")
+                    logs.append("The validator rejected speculative candidates, but deterministic high-confidence local findings were retained")
                 else:
                     logs.append(validated["review_note"])
 
@@ -897,7 +920,7 @@ class ScanExecutionService:
             )
 
             try:
-                verdict_summary = await self.ai_client.summarize_verdict(
+                verdict_summary = await ai_client.summarize_verdict(
                     project_name=session.repo,
                     source_path=session.source_path,
                     repository_profile=profile,
@@ -917,14 +940,14 @@ class ScanExecutionService:
                 )
             except ExternalAIServiceError as exc:
                 logger.warning("AI verdict summary failed; using deterministic summary", exc_info=exc)
-                logs.append("AI verdict summary was unavailable; using deterministic summary.")
+                logs.append("AI verdict summary was unavailable; using deterministic summary")
                 verdict_summary = {
                     "review_note": "",
                     "repository_summary": build_repository_summary(profile, repository_artifacts, findings),
-                    "coverage_summary": "Coverage summary unavailable due to AI service interruption.",
+                    "coverage_summary": "Coverage summary unavailable due to AI service interruption",
                     "analysis_brief": None,
                 }
-            self._append_runtime_events(logs)
+            self._append_runtime_events(logs, ai_client)
             if verdict_summary.get("review_note"):
                 logs.append(verdict_summary["review_note"])
 
@@ -944,14 +967,14 @@ class ScanExecutionService:
 
             if is_safe:
                 if coverage_snapshot["coverage_percent"] >= 90:
-                    logs.append("No confirmed high-confidence issue remained after validation.")
+                    logs.append("No confirmed high-confidence issue remained after validation")
                 else:
-                    logs.append("No confirmed high-confidence issue remained, but the reviewed coverage did not span the entire codebase.")
+                    logs.append("No confirmed high-confidence issue remained, but the reviewed coverage did not span the entire codebase")
             else:
                 logs.append(f"Confirmed {len(findings)} validated findings. Highest severity: {findings[0].severity}.")
 
             finished_at = utc_now()
-            runtime_metrics = getattr(self.ai_client, "snapshot_runtime_metrics", lambda **_: None)()
+            runtime_metrics = getattr(ai_client, "snapshot_runtime_metrics", lambda **_: None)()
             runtime_metrics = merge_runtime_metrics_with_penetration(runtime_metrics, penetration_report)
             runtime_metrics = merge_runtime_metrics_with_penetration_sandbox(runtime_metrics, penetration_sandbox)
             runtime_metrics = merge_runtime_metrics_with_native_index(runtime_metrics, native_index)
@@ -1069,7 +1092,7 @@ class ScanExecutionService:
             failed_at = utc_now()
             logger.exception("Scan execution failed", extra={"session_id": session_id, "source_path": session.source_path})
             friendly_error = _build_scan_failure_message(exc)
-            logs.append("Scan failed before the final verdict was produced.")
+            logs.append("Scan failed before the final verdict was produced")
             logs.append(friendly_error)
             latest_scan_job = (
                 await self._update_job(
@@ -1093,9 +1116,9 @@ class ScanExecutionService:
                     "progress_message": "Scan failed",
                     "current_phase": "Failed",
                     "elapsed_seconds": int(time.monotonic() - started_at),
-                    "preview": "The scan stopped before a final result was produced. Review the failure reason and retry when the provider is available.",
+                    "preview": "The scan stopped before a final result was produced — review the failure reason and retry when the provider is available",
                     "progress_logs": logs[-12:],
-                    "runtime_metrics": getattr(self.ai_client, "snapshot_runtime_metrics", lambda **_: None)(),
+                    "runtime_metrics": getattr(ai_client, "snapshot_runtime_metrics", lambda **_: None)(),
                     "error_message": friendly_error,
                     "findings": [],
                     "candidate_findings": [],
@@ -1104,10 +1127,10 @@ class ScanExecutionService:
                     "security_score": None,
                     "score_rationale": {
                         "status": "failed",
-                        "reason": "No security score is available because the scan did not complete successfully.",
+                        "reason": "No security score is available because the scan did not complete successfully",
                         "provider_failure": isinstance(exc, ExternalAIServiceError),
                     },
-                    "coverage_summary": "Coverage is unavailable because the scan did not complete.",
+                    "coverage_summary": "Coverage is unavailable because the scan did not complete",
                     "coverage_percent": 0,
                     "annotations": [],
                     "annotation_summary": {"ready": 0, "status": "failed"},
@@ -1233,8 +1256,8 @@ class ScanExecutionService:
             }
         return build_scan_job_snapshot(job)
 
-    def _append_runtime_events(self, logs: list[str]) -> None:
-        for event in getattr(self.ai_client, "drain_runtime_events", lambda: [])():
+    def _append_runtime_events(self, logs: list[str], ai_client: SecurityAnalysisAIClient) -> None:
+        for event in getattr(ai_client, "drain_runtime_events", lambda: [])():
             if not event:
                 continue
             lowered = event.lower()
@@ -1286,7 +1309,7 @@ class ScanExecutionService:
             )
         except ExternalAIServiceError as exc:
             logger.warning("AI validation failed; returning no validated findings", exc_info=exc)
-            logs.append("AI validation was unavailable; no findings were auto-validated.")
+            logs.append("AI validation was unavailable; no findings were auto-validated")
             return {"review_note": "", "safe_summary": "", "findings": []}
 
         review_notes = [str(first_pass.get("review_note", "")).strip()]
@@ -1318,7 +1341,7 @@ class ScanExecutionService:
                     merged_findings.extend(second_pass.get("findings", []))
                 except ExternalAIServiceError as exc:
                     logger.warning("Second validation pass failed; keeping first pass output", exc_info=exc)
-                    logs.append("Deep validation pass 2 was unavailable; continuing with pass 1 output.")
+                    logs.append("Deep validation pass 2 was unavailable; continuing with pass 1 output")
 
         deduped_findings = cluster_findings(merged_findings)
         return {
@@ -1331,7 +1354,7 @@ class ScanExecutionService:
 def _build_scan_failure_message(exc: Exception) -> str:
     if isinstance(exc, ExternalAIServiceError):
         return sanitize_runtime_error(exc, operation="scan")
-    return "The scan failed because CodeGuard could not complete its AI analysis. Check the server logs and retry the request."
+    return "The scan failed because CodeGuard could not complete its AI analysis — check the server logs and retry the request"
 
 
 def collect_heuristic_candidates(files: list[Path], source_root: Path) -> list[dict]:

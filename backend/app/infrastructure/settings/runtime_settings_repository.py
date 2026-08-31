@@ -52,9 +52,9 @@ class RuntimeSettingsRepository:
                 "$set": {
                     key: value
                     for key, value in next_document.items()
-                    if key != "_id"
+                    if key not in ("_id", "created_at")
                 },
-                "$setOnInsert": {"created_at": datetime.now(UTC)},
+                "$setOnInsert": {"created_at": current.get("created_at", datetime.now(UTC))},
             },
             upsert=True,
         )
@@ -70,13 +70,10 @@ class RuntimeSettingsRepository:
             "auto_open_results": True,
             "remember_sidebar_state": True,
             "motion_profile": "fluid",
-            "theme": "light",
+            "theme": "system",
             "surface_contrast": "soft",
             "remediation_max_attempts": 3,
             "remediation_reuse_explanation": True,
-            "external_ingestion_max_rps": int(settings.external_ingestion_max_rps),
-            "external_ingestion_retry_attempts": int(settings.external_ingestion_retry_attempts),
-            "external_ingestion_backoff_seconds": float(settings.external_ingestion_backoff_seconds),
             "ai_provider": None,
             "ai_model": None,
             "ai_base_url": None,

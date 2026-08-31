@@ -60,7 +60,7 @@ describe("buildFindingDecisionSummary", () => {
     );
 
     expect(summary.riskScore).toBeLessThan(78);
-    expect(summary.recommendedAction.toLowerCase()).toContain("re-run the broader analysis");
+    expect(summary.recommendedAction.toLowerCase()).toContain("re-run the broader review");
     expect(summary.executionDisposition).toBe("Re-scan before repository closure");
     expect(summary.residualRiskState.toLowerCase()).toContain("reduced");
   });

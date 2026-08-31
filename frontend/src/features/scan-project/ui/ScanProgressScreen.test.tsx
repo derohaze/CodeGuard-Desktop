@@ -90,12 +90,12 @@ describe("ScanProgressScreen", () => {
 
     render(<ScanProgressScreen session={session} />);
 
-    expect(screen.getByRole("heading", { name: "Analyzing your codebase security" })).toBeInTheDocument();
-    expect(screen.getByText("Inspecting repository structure, data flow, and active review signals.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reviewing your codebase for security issues" })).toBeInTheDocument();
+    expect(screen.getByText("Inspecting repository structure, data flow, and active review signals")).toBeInTheDocument();
     expect(screen.getByText("Coverage pending")).toBeInTheDocument();
-    expect(screen.getByText("Repository structure, dependency markers, and review metadata are being prepared.")).toBeInTheDocument();
+    expect(screen.getByText("Repository structure, dependency markers, and review metadata are being prepared")).toBeInTheDocument();
 
-    expect(screen.queryByText("Security analysis in progress")).not.toBeInTheDocument();
+    expect(screen.queryByText("Codebase analysis in progress")).not.toBeInTheDocument();
     expect(screen.queryByText(/trust boundaries, framework markers, sinks, and graph summaries/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Coverage starts during review")).not.toBeInTheDocument();
   });
@@ -171,7 +171,7 @@ describe("ScanProgressScreen", () => {
     render(<ScanProgressScreen session={session} />);
 
     expect(screen.getByText("No path candidates")).toBeInTheDocument();
-    expect(screen.getByText("Path tracing ran but found no source-to-sink candidates in this run.")).toBeInTheDocument();
+    expect(screen.getByText("Path tracing ran but found no source-to-sink candidates in this run")).toBeInTheDocument();
     expect(screen.queryByText("0/0 paths")).not.toBeInTheDocument();
   });
 
@@ -246,7 +246,7 @@ describe("ScanProgressScreen", () => {
     render(<ScanProgressScreen session={session} />);
 
     expect(screen.getByText("Path review pending")).toBeInTheDocument();
-    expect(screen.getByText("Review starts after path inventory is available.")).toBeInTheDocument();
+    expect(screen.getByText("Review starts after path inventory is available")).toBeInTheDocument();
     expect(screen.queryByText("0/0 paths")).not.toBeInTheDocument();
   });
 });

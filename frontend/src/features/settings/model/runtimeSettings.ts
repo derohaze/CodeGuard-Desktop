@@ -8,19 +8,18 @@ import {
 
 export const SIDEBAR_COLLAPSED_STORAGE_KEY = "codeguard.sidebar.collapsed";
 
+export const THEME_STORAGE_KEY = "codeguard.theme";
+
 export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   defaultPreset: "balanced",
   defaultScanMode: "deep",
   autoOpenResults: true,
   rememberSidebarState: true,
   motionProfile: "fluid",
-  theme: "light",
+  theme: "system",
   surfaceContrast: "soft",
   remediationMaxAttempts: 3,
   remediationReuseExplanation: true,
-  externalIngestionMaxRps: 10,
-  externalIngestionRetryAttempts: 3,
-  externalIngestionBackoffSeconds: 0.5,
   updatedAt: new Date(0).toISOString(),
 };
 

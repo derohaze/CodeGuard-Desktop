@@ -14,7 +14,7 @@ import { HomeScreen } from "@/features/dashboard";
 import { FindingDetailPanel } from "@/features/review-finding";
 import { ScanEmptyScreen, ScanProgressScreen, ScanResultsScreen } from "@/features/scan-project";
 import { SettingsScreen } from "@/features/settings";
-import { SIDEBAR_COLLAPSED_STORAGE_KEY, useRuntimeSettings } from "@/features/settings/model/runtimeSettings";
+import { SIDEBAR_COLLAPSED_STORAGE_KEY, THEME_STORAGE_KEY, useRuntimeSettings } from "@/features/settings/model/runtimeSettings";
 import { Sidebar } from "@/features/sidebar-navigation";
 import { RepoOverviewScreen } from "@/features/repo-overview";
 import type { Finding } from "@/entities/finding/model/types";
@@ -101,12 +101,46 @@ export default function Page() {
   }, [refreshSessions]);
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    if (typeof document === "undefined" || typeof window === "undefined") return;
+    // Until the persisted settings load, keep the theme that the inline
+    // bootstrap in index.html applied (saved choice or system preference),
+    // so the window never flashes to a wrong mode before the real setting
+    // arrives.
+    if (runtimeSettingsLoading) return;
     const root = document.documentElement;
-    root.dataset.themeMode = runtimeSettings.theme;
-    root.dataset.surfaceContrast = runtimeSettings.surfaceContrast;
-    root.dataset.motionProfile = runtimeSettings.motionProfile;
-  }, [runtimeSettings.motionProfile, runtimeSettings.surfaceContrast, runtimeSettings.theme]);
+    const preferDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      const resolved = runtimeSettings.theme === "system" ? (preferDarkQuery.matches ? "dark" : "light") : runtimeSettings.theme;
+      root.dataset.theme = resolved;
+    };
+    applyTheme();
+    if (runtimeSettings.theme === "system") {
+      preferDarkQuery.addEventListener("change", applyTheme);
+      return () => preferDarkQuery.removeEventListener("change", applyTheme);
+    }
+    return undefined;
+  }, [runtimeSettings.theme, runtimeSettingsLoading]);
+
+  // Mirror the resolved-but-user-chosen theme to localStorage so the inline
+  // bootstrap in index.html can restore it before first paint on next launch.
+  // Only written once settings have actually loaded (not the fallback default),
+  // so we never clobber a persisted choice with the temporary "system" fallback.
+  useEffect(() => {
+    if (typeof window === "undefined" || runtimeSettingsLoading) return;
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, runtimeSettings.theme);
+    } catch {
+      // storage unavailable — theme still resolves via system preference
+    }
+  }, [runtimeSettings.theme, runtimeSettingsLoading]);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const root = document.documentElement;
+      root.dataset.surfaceContrast = runtimeSettings.surfaceContrast;
+      root.dataset.motionProfile = runtimeSettings.motionProfile;
+    }
+  }, [runtimeSettings.motionProfile, runtimeSettings.surfaceContrast]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -204,7 +238,7 @@ export default function Page() {
       syncSessionOrder([detail.session, ...sessions.filter((item) => item.id !== detail.session.id)]);
       setScreen("scan-progress");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to start the scan.";
+      const message = error instanceof Error ? error.message : "Unable to start the scan";
       toast.error(toAnalystCopy(message));
     }
   }, [mergeSessionSummary, sessions, syncSessionOrder]);
@@ -229,7 +263,7 @@ export default function Page() {
       const isCompleted = detail.session.status === "completed";
       setScreen(isCompleted ? "scan-completed" : detail.session.status === "failed" ? "scan-completed" : "scan-progress");
     } catch (error) {
-      toast.error(toAnalystCopy(error instanceof Error ? error.message : "Unable to open the analyst session."));
+      toast.error(toAnalystCopy(error instanceof Error ? error.message : "Unable to open the review session"));
     }
   }, [mergeSessionSummary]);
 
@@ -248,14 +282,14 @@ export default function Page() {
         setSessions((c) => c.filter((i) => i.id !== deleteTarget.session.id));
         setSessionOrder((c) => c.filter((id) => id !== deleteTarget.session.id));
         if (activeSessionId === deleteTarget.session.id) resetActiveSessionState();
-        toast.success("The session was deleted successfully.");
+        toast.success("The session was deleted successfully");
       } else {
         await deleteAllScanSessions();
         setSessions([]); setSessionOrder([]); resetActiveSessionState();
-        toast.success("All analyst sessions were deleted successfully.");
+        toast.success("All review sessions were deleted successfully");
       }
     } catch (error) {
-      toast.error(toAnalystCopy(error instanceof Error ? error.message : "Unable to delete the analyst session."));
+      toast.error(toAnalystCopy(error instanceof Error ? error.message : "Unable to delete the review session"));
     } finally { setIsDeleting(false); setDeleteTarget(null); }
   }, [activeSessionId, deleteTarget, isDeleting, resetActiveSessionState]);
   const handleReorderSessions = useCallback((ids: string[]) => setSessionOrder(ids), []);
@@ -286,15 +320,15 @@ export default function Page() {
         </div>
       ) : (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          <SettingsScreen isSidebarCollapsed={isSidebarCollapsed} onBack={() => setView("workspace")} settings={runtimeSettings} isSaving={runtimeSettingsSaving || runtimeSettingsLoading} onPatchSettings={async (patch) => { try { await patchRuntimeSettings(patch); } catch (e) { toast.error(toAnalystCopy(e instanceof Error ? e.message : "Unable to save runtime settings.")); } }} />
+          <SettingsScreen isSidebarCollapsed={isSidebarCollapsed} onBack={() => setView("workspace")} settings={runtimeSettings} isSaving={runtimeSettingsSaving || runtimeSettingsLoading} onPatchSettings={async (patch) => { try { await patchRuntimeSettings(patch);    } catch (e) { toast.error(toAnalystCopy(e instanceof Error ? e.message : "Unable to save runtime settings")); } }} />
         </div>
       )}
       <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open && !isDeleting) setDeleteTarget(null); }}>
         <AlertDialogContent className="max-w-[420px] rounded-[28px] border border-border-soft bg-surface p-0 shadow-[0_28px_80px_rgba(0,0,0,0.14)]">
           <div className="space-y-5 p-6">
             <AlertDialogHeader className="space-y-2 text-left">
-              <AlertDialogTitle className="font-brand text-[26px] font-medium tracking-[-0.02em] text-txt-primary">{deleteTarget?.type === "all" ? "Delete all analyst sessions?" : "Delete this analyst session?"}</AlertDialogTitle>
-              <AlertDialogDescription className="text-sm leading-6 text-txt-secondary">{deleteTarget?.type === "all" ? "This will permanently remove every saved analyst session from the sidebar and results history." : `This will permanently remove "${toAnalystCopy(deleteTarget?.session.title ?? "this session")}" from the sidebar and results history.`}</AlertDialogDescription>
+              <AlertDialogTitle className="font-brand text-[26px] font-medium tracking-[-0.02em] text-txt-primary">{deleteTarget?.type === "all" ? "Delete all review sessions?" : "Delete this review session?"}</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm leading-6 text-txt-secondary">{deleteTarget?.type === "all" ? "This will permanently remove every saved review session from the sidebar and results history" : `This will permanently remove "${toAnalystCopy(deleteTarget?.session.title ?? "this session")}" from the sidebar and results history`}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="gap-2 sm:justify-start sm:space-x-0">
               <AlertDialogCancel className="mt-0 rounded-full border border-[#ddd1bf] bg-[#f6efe6] px-5 !text-[#1e1b16] hover:bg-[#eee3d5]" disabled={isDeleting}>Cancel</AlertDialogCancel>
@@ -369,7 +403,7 @@ function SessionWorkspaceTabs({ session, currentScreen, tabs, onNavigate }: { se
             <h2 className="truncate text-[15px] font-semibold text-txt-primary">{session.session.repo}</h2>
             <span className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-txt-secondary">{session.verdict === "safe" ? "Reviewed" : "Completed"}</span>
           </div>
-          <p className="mt-1 text-[12px] text-txt-tertiary">{session.session.scanMode === "deep" ? "Deep analysis" : "Fast analysis"} · {session.session.time}</p>
+          <p className="mt-1 text-[12px] text-txt-tertiary">{session.session.scanMode === "deep" ? "Deep review" : "Fast review"} · {session.session.time}</p>
         </div>
       </div>
       <div ref={scrollRef} onMouseDown={handleMouseDown} onWheel={handleWheel} className="hide-scrollbar mt-4 overflow-x-auto select-none" style={{ scrollbarWidth: "none", msOverflowStyle: "none", cursor: isDraggingTabs ? "grabbing" : "grab" }}>

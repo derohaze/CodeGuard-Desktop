@@ -34,8 +34,8 @@ export function buildRepoIntelligenceLedger(session: ScanSessionDetail): RepoInt
       ledgerClass: "framework-footprint",
       priority: frameworkCount >= 4 ? "high" : "normal",
       label: "Framework footprint mapped",
-      evidence: `${frameworkCount} framework signal(s) captured across languages, runtimes, and package managers.`,
-      nextAction: "Confirm the framework edges before expanding autonomous coverage.",
+      evidence: `${frameworkCount} framework signal(s) captured across languages, runtimes, and package managers`,
+      nextAction: "Confirm the framework edges before expanding autonomous coverage"
     });
   }
 
@@ -45,8 +45,8 @@ export function buildRepoIntelligenceLedger(session: ScanSessionDetail): RepoInt
       ledgerClass: "service-graph",
       priority: graphCount >= 4 ? "high" : "normal",
       label: "Service graph pressure recorded",
-      evidence: `${graphCount} service and boundary signal(s) are tracked in the repo graph.`,
-      nextAction: "Validate trust boundaries and external surfaces before relying on autonomous remediation.",
+      evidence: `${graphCount} service and boundary signal(s) are tracked in the repo graph`,
+      nextAction: "Validate trust boundaries and external surfaces before relying on autonomous remediation"
     });
   }
 
@@ -59,8 +59,8 @@ export function buildRepoIntelligenceLedger(session: ScanSessionDetail): RepoInt
       ledgerClass: "segmentation",
       priority: segmentationCount >= 4 ? "high" : "normal",
       label: "Segmentation signals captured",
-      evidence: `${segmentationCount} segmentation signal(s) identified across critical and sensitive zones.`,
-      nextAction: "Keep segmentation boundaries in the approval path before broadening auto-apply.",
+      evidence: `${segmentationCount} segmentation signal(s) identified across critical and sensitive zones`,
+      nextAction: "Keep segmentation boundaries in the approval path before broadening auto-apply"
     });
   }
 
@@ -73,8 +73,8 @@ export function buildRepoIntelligenceLedger(session: ScanSessionDetail): RepoInt
       ledgerClass: "registry",
       priority: registryCount >= 5 ? "high" : "normal",
       label: "Security registry pressure tracked",
-      evidence: `${registryCount} registry signal(s) remain active in the repo inventory.`,
-      nextAction: "Correlate inputs and sinks before relaxing verification gates.",
+      evidence: `${registryCount} registry signal(s) remain active in the repo inventory`,
+      nextAction: "Correlate inputs and sinks before relaxing verification gates"
     });
   }
 
@@ -83,8 +83,8 @@ export function buildRepoIntelligenceLedger(session: ScanSessionDetail): RepoInt
       ledgerClass: "coverage",
       priority: session.session.coveragePercent < 85 ? "critical" : "high",
       label: "Coverage gaps remain",
-      evidence: `${session.session.coveragePercent}% coverage with ${session.session.skippedFilesCount} skipped file(s) recorded.`,
-      nextAction: "Close coverage gaps before trusting repo-wide risk posture.",
+      evidence: `${session.session.coveragePercent}% coverage with ${session.session.skippedFilesCount} skipped file(s) recorded`,
+      nextAction: "Close coverage gaps before trusting repo-wide risk posture"
     });
   }
 
@@ -93,8 +93,8 @@ export function buildRepoIntelligenceLedger(session: ScanSessionDetail): RepoInt
       ledgerClass: "coverage",
       priority: "critical",
       label: "Repository inventory missing",
-      evidence: "File inventory is not available for the current session.",
-      nextAction: "Rebuild repository inventory before relying on repo-wide metrics.",
+      evidence: "File inventory is not available for the current session",
+      nextAction: "Rebuild repository inventory before relying on repo-wide metrics"
     });
   }
 
@@ -122,7 +122,7 @@ export function summarizeRepoIntelligenceLedger(items: RepoIntelligenceLedgerIte
     segmentationItems,
     registryItems,
     coverageItems,
-    topItemLabel: topItem ? `${topItem.priority} - ${topItem.label}` : "No repo intelligence ledger entries",
+    topItemLabel: topItem ? `${topItem.priority} - ${topItem.label}` : "No repo intelligence ledger entries"
   };
 }
 

@@ -64,7 +64,7 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
           <div>
             <p className="text-sm font-semibold text-txt-primary">{session.session.repo}</p>
             <p className="mt-1 text-xs uppercase tracking-[0.14em] text-txt-tertiary">
-              {session.session.scanMode === "deep" ? "Deep analysis" : "Fast analysis"} | {session.session.time}
+              {session.session.scanMode === "deep" ? "Deep review" : "Fast review"} | {session.session.time}
             </p>
           </div>
           <div className="flex items-center gap-2 text-txt-secondary">
@@ -81,15 +81,15 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
           style={{ borderColor: safeVerdict ? "rgba(94, 155, 110, 0.22)" : "hsl(var(--border-soft))" }}
         >
           <p className={`text-sm font-medium ${safeVerdict ? "text-status-success" : "text-txt-primary"}`}>
-            {safeVerdict ? "No validated security issue was confirmed in the selected scope." : "Validated repository assessment"}
+            {safeVerdict ? "No validated security issue was confirmed in the selected scope" : "Validated repository assessment"}
           </p>
           <p className="mt-2 text-sm leading-6 text-txt-secondary">
-            {toAnalystCopy(session.session.repositorySummary) || (safeVerdict ? "The selected source was reviewed and no high-confidence issue was confirmed." : "CodeGuard completed the repository assessment.")}
+            {toAnalystCopy(session.session.repositorySummary) || (safeVerdict ? "The selected source was reviewed and no high-confidence issue was confirmed" : "CodeGuard completed the repository assessment")}
           </p>
           {!hasFindings && hasCoverageGap && (
             <p className="mt-2 text-sm leading-6 text-txt-secondary">
               The score is below 100 because the reviewed coverage was partial. No confirmed finding was retained, but the selected scope was not fully covered.
-              {hasCandidateFindings ? " Candidate findings are shown below for manual review." : ""}
+              {hasCandidateFindings ? " Candidate findings are shown below for manual review" : ""}
             </p>
           )}
         </motion.div>
@@ -145,7 +145,7 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
             </span>
           </div>
           <p className="mt-2 text-sm leading-6 text-txt-secondary">
-            {toAnalystCopy(session.session.coverageSummary) || "Coverage details were not captured for this analysis."}
+            {toAnalystCopy(session.session.coverageSummary) || "Coverage details were not captured for this review."}
           </p>
           <div className="mt-3 grid gap-2 text-xs text-txt-secondary sm:grid-cols-2">
             <span>Files reviewed: {session.session.reviewedFilesCount}/{session.session.eligibleFilesCount || session.session.reviewedFilesCount}</span>
@@ -263,7 +263,7 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
                 <InfoSummaryCard
                   label="Recovery controller"
                   value={session.session.workflowSummary.recoverySummary.controllerStatus}
-                  note={session.session.workflowSummary.recoverySummary.retryAvailable ? "A recovery path is still active for this session." : "No active recovery path remains."}
+                  note={session.session.workflowSummary.recoverySummary.retryAvailable ? "A recovery path is still active for this session" : "No active recovery path remains"}
                 />
               </div>
             )}
@@ -335,8 +335,8 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
           className="grid gap-3 md:grid-cols-3"
         >
           <InfoSummaryCard
-            label="Analysis mode"
-            value={session.session.scanMode === "deep" ? "Deep analysis" : "Fast analysis"}
+            label="Review mode"
+            value={session.session.scanMode === "deep" ? "Deep review" : "Fast review"}
             note={getScanPlanWorkUnitStrategyPaths(session.session.scanPlan) ?? "Path-centric review"}
           />
           <InfoSummaryCard
@@ -353,7 +353,7 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
             }
             note={
               session.session.status === "failed"
-                ? toAnalystCopy(String(session.errorMessage ?? "The analysis did not complete, so no security score was produced."))
+                ? toAnalystCopy(String(session.errorMessage ?? "The review did not complete, so no security score was produced"))
                 : `Queue ${approvalQueue.length} item(s) - coverage ${Number(session.session.scoreRationale?.coverage_percent ?? session.session.coveragePercent)} percent - candidate pressure ${Number(session.session.scoreRationale?.candidate_pressure ?? 0)}`
             }
           />
@@ -369,33 +369,33 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
           >
             <AnalystListCard
               label="Potential risks"
-              intro="Unconfirmed concerns derived from reviewed evidence, missing verification, or suspicious patterns."
+              intro="Unconfirmed concerns derived from reviewed evidence, missing verification, or suspicious patterns"
               items={analysisBrief.potentialRisks}
-              emptyMessage="No additional potential risk was surfaced beyond the validated queue."
+              emptyMessage="No additional potential risk was surfaced beyond the validated queue"
             />
             <AnalystListCard
               label="Security observations"
-              intro="Defensive patterns that appear to be present in the reviewed scope."
+              intro="Defensive patterns that appear to be present in the reviewed scope"
               items={analysisBrief.securityObservations}
-              emptyMessage="No distinct defensive observation was captured for this run."
+              emptyMessage="No distinct defensive observation was captured for this run"
             />
             <AnalystListCard
               label="What CodeGuard could not verify"
-              intro="These are real analysis limits from the reviewed run, not proof that the code is unsafe."
+              intro="These are real review limits from the reviewed run, not proof that the code is unsafe"
               items={analysisBrief.analysisLimitations}
-              emptyMessage="No major verification limit was surfaced for this run."
+              emptyMessage="No major verification limit was surfaced for this run"
             />
             <AnalystListCard
               label="If I were attacking this"
-              intro="Attack probes CodeGuard would prioritize next against the reviewed surfaces."
+              intro="Attack probes CodeGuard would prioritize next against the reviewed surfaces"
               items={analysisBrief.attackThinking}
-              emptyMessage="No additional attack probe was highlighted beyond the reviewed surfaces."
+              emptyMessage="No additional attack probe was highlighted beyond the reviewed surfaces"
             />
             <AnalystListCard
               label="Recommended next steps"
-              intro="Concrete follow-up actions generated from the current run."
+              intro="Concrete follow-up actions generated from the current run"
               items={analysisBrief.nextSteps}
-              emptyMessage="No additional follow-up step was suggested for this run."
+              emptyMessage="No additional follow-up step was suggested for this run"
             />
           </motion.div>
         )}
@@ -407,13 +407,13 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
           emptyMessage={
             safeVerdict
               ? hasCoverageGap
-                ? "No confirmed finding was retained, but the reviewed coverage was partial. The score stays below 100 until the selected scope is fully covered."
+                ? "No confirmed finding was retained, but the reviewed coverage was partial — the score stays below 100 until the selected scope is fully covered"
                 : hasSecurityScore
-                  ? `The analysis finished with a score of ${session.session.securityScore}/100. No high-confidence, confirmed security issue was found in the reviewed scope.`
-                  : "No high-confidence, confirmed security issue was found in the reviewed scope."
+                  ? `The review finished with a score of ${session.session.securityScore}/100 — no high-confidence, confirmed security issue was found in the reviewed scope`
+                  : "No high-confidence, confirmed security issue was found in the reviewed scope"
               : approvalQueue.length > 0
-                ? "All validated findings in this session are already tracked in the review queue below."
-                : "No confirmed findings were returned for this analysis."
+                ? "All validated findings in this session are already tracked in the review queue below"
+                : "No confirmed findings were returned for this review"
           }
           onSelectFinding={onSelectFinding}
         />
@@ -423,7 +423,7 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
             title="Candidate findings"
             subtitle="Needs review"
             findings={filteredCandidateFindings}
-            emptyMessage="No candidate finding was retained for manual review."
+            emptyMessage="No candidate finding was retained for manual review"
             onSelectFinding={onSelectFinding}
             lowConfidence
           />
@@ -535,7 +535,7 @@ function buildScoreExplanation(
     }
     explanations.push(`Score inputs from this run: ${scoreInputs.join(", ")}.`);
   } else {
-    explanations.push("This run did not return a score from the backend.");
+    explanations.push("This review did not return a score from the backend.");
   }
 
   const reductions = [
@@ -783,7 +783,7 @@ function AnalystListCard({
           ))}
         </div>
       ) : emptyMessage !== undefined ? (
-        <p className="mt-3 text-sm leading-6 text-txt-secondary">{emptyMessage ?? "No additional analyst note was captured."}</p>
+        <p className="mt-3 text-sm leading-6 text-txt-secondary">{emptyMessage ?? "No additional review note was captured"}</p>
       ) : null
       }
     </div>

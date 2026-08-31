@@ -18,13 +18,10 @@ export interface RuntimeSettings {
   autoOpenResults: boolean;
   rememberSidebarState: boolean;
   motionProfile: "fluid" | "reduced" | "instant";
-  theme: "light" | "system";
+  theme: "light" | "dark" | "system";
   surfaceContrast: "soft" | "standard";
   remediationMaxAttempts: number;
   remediationReuseExplanation: boolean;
-  externalIngestionMaxRps: number;
-  externalIngestionRetryAttempts: number;
-  externalIngestionBackoffSeconds: number;
   aiProvider?: string | null;
   aiModel?: string | null;
   aiBaseUrl?: string | null;
@@ -39,13 +36,10 @@ export interface UpdateRuntimeSettingsPayload {
   autoOpenResults?: boolean;
   rememberSidebarState?: boolean;
   motionProfile?: "fluid" | "reduced" | "instant";
-  theme?: "light" | "system";
+  theme?: "light" | "dark" | "system";
   surfaceContrast?: "soft" | "standard";
   remediationMaxAttempts?: number;
   remediationReuseExplanation?: boolean;
-  externalIngestionMaxRps?: number;
-  externalIngestionRetryAttempts?: number;
-  externalIngestionBackoffSeconds?: number;
   aiProvider?: string | null;
   aiApiKey?: string | null;
   aiBaseUrl?: string | null;
@@ -199,9 +193,6 @@ export async function updateRuntimeSettings(payload: UpdateRuntimeSettingsPayloa
   if (payload.surfaceContrast !== undefined) body.surface_contrast = payload.surfaceContrast;
   if (payload.remediationMaxAttempts !== undefined) body.remediation_max_attempts = payload.remediationMaxAttempts;
   if (payload.remediationReuseExplanation !== undefined) body.remediation_reuse_explanation = payload.remediationReuseExplanation;
-  if (payload.externalIngestionMaxRps !== undefined) body.external_ingestion_max_rps = payload.externalIngestionMaxRps;
-  if (payload.externalIngestionRetryAttempts !== undefined) body.external_ingestion_retry_attempts = payload.externalIngestionRetryAttempts;
-  if (payload.externalIngestionBackoffSeconds !== undefined) body.external_ingestion_backoff_seconds = payload.externalIngestionBackoffSeconds;
   if (payload.aiProvider !== undefined) body.ai_provider = payload.aiProvider;
   if (payload.aiApiKey !== undefined) body.ai_api_key = payload.aiApiKey;
   if (payload.aiBaseUrl !== undefined) body.ai_base_url = payload.aiBaseUrl;
@@ -296,26 +287,6 @@ export async function getRepoIntelligenceSummary(limit = 25): Promise<WorkflowRe
 export async function getRepoHotspots(limit = 25): Promise<WorkflowRepoHotspotItem[]> {
   const data = await request<WorkflowRepoHotspotFeedApiResponse>(`/sessions/repo-hotspots?limit=${limit}`);
   return data.items.map(mapWorkflowRepoHotspotItem);
-}
-
-export async function getTeamPostureSummary(limit = 25): Promise<WorkflowTeamPostureSummary> {
-  const data = await request<WorkflowTeamPostureSummaryApiResponse>(`/sessions/team-posture-summary?limit=${limit}`);
-  return mapWorkflowTeamPostureSummary(data);
-}
-
-export async function getTeamPostureFeed(limit = 25): Promise<WorkflowTeamPostureItem[]> {
-  const data = await request<WorkflowTeamPostureFeedApiResponse>(`/sessions/team-posture-feed?limit=${limit}`);
-  return data.items.map(mapWorkflowTeamPostureItem);
-}
-
-export async function getServiceExposureSummary(limit = 25): Promise<WorkflowServiceExposureSummary> {
-  const data = await request<WorkflowServiceExposureSummaryApiResponse>(`/sessions/service-exposure-summary?limit=${limit}`);
-  return mapWorkflowServiceExposureSummary(data);
-}
-
-export async function getServiceExposureFeed(limit = 25): Promise<WorkflowServiceExposureItem[]> {
-  const data = await request<WorkflowServiceExposureFeedApiResponse>(`/sessions/service-exposure-feed?limit=${limit}`);
-  return data.items.map(mapWorkflowServiceExposureItem);
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -734,9 +705,6 @@ function mapRuntimeSettings(data: RuntimeSettingsApiResponse): RuntimeSettings {
     surfaceContrast: data.surface_contrast,
     remediationMaxAttempts: data.remediation_max_attempts,
     remediationReuseExplanation: data.remediation_reuse_explanation,
-    externalIngestionMaxRps: data.external_ingestion_max_rps,
-    externalIngestionRetryAttempts: data.external_ingestion_retry_attempts,
-    externalIngestionBackoffSeconds: data.external_ingestion_backoff_seconds,
     aiProvider: (data as unknown as Record<string, unknown>).ai_provider as string | null | undefined ?? null,
     aiModel: (data as unknown as Record<string, unknown>).ai_model as string | null | undefined ?? null,
     aiBaseUrl: (data as unknown as Record<string, unknown>).ai_base_url as string | null | undefined ?? null,
@@ -1138,9 +1106,6 @@ interface RuntimeSettingsApiResponse {
   surface_contrast: RuntimeSettings["surfaceContrast"];
   remediation_max_attempts: number;
   remediation_reuse_explanation: boolean;
-  external_ingestion_max_rps: number;
-  external_ingestion_retry_attempts: number;
-  external_ingestion_backoff_seconds: number;
   ai_provider?: string | null;
   ai_model?: string | null;
   ai_base_url?: string | null;

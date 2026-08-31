@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   ArrowLeft01Icon,
@@ -9,12 +9,14 @@ import {
   ZapIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
 import type { RuntimeSettings, UpdateRuntimeSettingsPayload } from "@/shared/api/security";
 import { listProviders, listProviderModels, testProvider } from "@/shared/api/security";
 import type { ProviderInfo } from "@/shared/api/security";
+import { toAnalystCopy } from "@/shared/lib/analyst-copy";
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -32,36 +34,40 @@ const sections: Array<{ id: SettingsTab; label: string; icon: typeof Settings01I
 ];
 
 const scanModes = [
-  { value: "deep", label: "Deep analysis" },
-  { value: "fast", label: "Fast analysis" },
+  { value: "deep", label: "Deep review" },
+  { value: "fast", label: "Fast review" },
 ] as const;
+const themeOptions = [
+  { value: "system", label: "System", icon: Monitor },
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+] as const;
+
 const scanPresets = [
   {
     id: "safe",
     label: "Safe mode",
-    description: "Prioritize high-confidence findings and calmer defaults for steady review flows.",
+    description: "Prioritize high-confidence findings and calmer defaults for steady review flows",
     icon: Shield01Icon,
     defaultMode: "deep",
   },
   {
     id: "balanced",
     label: "Balanced",
-    description: "Keep security coverage broad without turning every analyst run into a noisy sweep.",
+    description: "Keep security coverage broad without turning every review run into a noisy sweep",
     icon: BalanceScaleIcon,
     defaultMode: "deep",
   },
   {
     id: "aggressive",
     label: "Aggressive",
-    description: "Push deeper heuristics and stricter checks to surface more risky edges earlier.",
+    description: "Push deeper heuristics and stricter checks to surface more risky edges earlier",
     icon: ZapIcon,
     defaultMode: "fast",
   },
 ] as const;
 
-const remediationAttemptOptions = [1, 2, 3, 4, 5];
-const ingestionRpsOptions = [2, 5, 10, 15, 20, 30];
-const ingestionRetryOptions = [1, 2, 3, 4, 5, 6];
+
 
 export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, isSidebarCollapsed = false }: SettingsScreenProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
@@ -121,7 +127,7 @@ export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, is
             {activeTab === "general" ? (
               <GeneralTab settings={settings} onPatchSettings={onPatchSettings} isSaving={isSaving} />
             ) : (
-              <ProvidersTab settings={settings} onPatchSettings={onPatchSettings} />
+              <ProvidersTab settings={settings} onPatchSettings={onPatchSettings} onBack={onBack} />
             )}
           </div>
         </div>
@@ -143,8 +149,8 @@ function GeneralTab({ settings, onPatchSettings, isSaving }: { settings: Runtime
       <div className="overflow-hidden rounded-[16px] border border-white/[0.06] bg-[#1e1e1e]">
         <div className="border-b border-white/[0.06] px-4 py-4">
           <div className="mb-3">
-            <p className="text-[13px] font-medium text-white">Analyst preset</p>
-            <p className="mt-1 text-[12.5px] leading-5 text-white/55">Choose the default posture for new analysis sessions.</p>
+            <p className="text-[13px] font-medium text-white">Review preset</p>
+            <p className="mt-1 text-[12.5px] leading-5 text-white/55">Choose the default posture for new review sessions</p>
           </div>
 
           <div className="grid gap-2.5 md:grid-cols-3">
@@ -179,8 +185,8 @@ function GeneralTab({ settings, onPatchSettings, isSaving }: { settings: Runtime
         </div>
 
         <SettingsRow
-          title="Default analysis mode"
-          description="Set how new security analysis sessions start."
+          title="Default review mode"
+          description="Set how new code review sessions start"
           control={
             <Select
               value={settings.defaultScanMode}
@@ -202,79 +208,47 @@ function GeneralTab({ settings, onPatchSettings, isSaving }: { settings: Runtime
 
         <SettingsRow
           title="Auto-open results"
-          description="Open findings automatically after analysis completion."
+          description="Open findings automatically after review completion"
           control={<Switch checked={settings.autoOpenResults} onCheckedChange={(checked) => void onPatchSettings({ autoOpenResults: checked })} />}
         />
 
         <SettingsRow
           title="Sidebar behavior"
-          description="Remember the last open or collapsed state."
+          description="Remember the last open or collapsed state"
           control={<Switch checked={settings.rememberSidebarState} onCheckedChange={(checked) => void onPatchSettings({ rememberSidebarState: checked })} />}
-        />
-
-        <SettingsRow
-          title="Remediation retries"
-          description="Maximum tuning attempts per remediation run."
-          control={
-            <Select value={String(settings.remediationMaxAttempts)} onValueChange={(value) => void onPatchSettings({ remediationMaxAttempts: Number(value) })}>
-              <SelectTrigger className={selectClassName}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className={selectContentClassName}>
-                {remediationAttemptOptions.map((value) => (
-                  <SelectItem key={value} value={String(value)} className={selectItemClassName}>
-                    {value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          }
-        />
-
-        <SettingsRow
-          title="Reuse explanation on retry"
-          description="Reduce provider requests by reusing the first explanation across retries."
-          control={<Switch checked={settings.remediationReuseExplanation} onCheckedChange={(checked) => void onPatchSettings({ remediationReuseExplanation: checked })} />}
-        />
-
-        <SettingsRow
-          title="External ingestion max RPS"
-          description="Rate limit for external security knowledge fetch runs."
-          control={
-            <Select value={String(settings.externalIngestionMaxRps)} onValueChange={(value) => void onPatchSettings({ externalIngestionMaxRps: Number(value) })}>
-              <SelectTrigger className={selectClassName}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className={selectContentClassName}>
-                {ingestionRpsOptions.map((value) => (
-                  <SelectItem key={value} value={String(value)} className={selectItemClassName}>
-                    {value} req/s
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          }
-        />
-
-        <SettingsRow
-          title="External ingestion retries"
-          description="Retry attempts for transient external source failures."
-          control={
-            <Select value={String(settings.externalIngestionRetryAttempts)} onValueChange={(value) => void onPatchSettings({ externalIngestionRetryAttempts: Number(value) })}>
-              <SelectTrigger className={selectClassName}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className={selectContentClassName}>
-                {ingestionRetryOptions.map((value) => (
-                  <SelectItem key={value} value={String(value)} className={selectItemClassName}>
-                    {value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          }
           border={false}
         />
+      </div>
+
+      <div className="overflow-hidden rounded-[16px] border border-white/[0.06] bg-[#1e1e1e]">
+        <div className="px-4 py-4">
+          <div className="mb-3">
+            <p className="text-[13px] font-medium text-white">Appearance</p>
+            <p className="mt-1 text-[12.5px] leading-5 text-white/55">Choose a look for the app — System follows your device</p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            {themeOptions.map((option) => {
+              const active = settings.theme === option.value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => void onPatchSettings({ theme: option.value })}
+                  className={`group flex flex-col items-center gap-2 rounded-xl border px-3 py-3.5 transition-all ${
+                    active
+                      ? "bg-[#2a241e] border-[#c9a86a]/25 shadow-[0_0_0_1px_rgba(201,168,106,0.12)]"
+                      : "bg-[#232323] border-white/[0.06] hover:bg-[#262626] hover:border-white/[0.08]"
+                  }`}
+                >
+                  <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${active ? "bg-white/[0.08] text-white" : "bg-white/[0.06] text-white/70"}`}>
+                    <option.icon size={14} strokeWidth={1.7} />
+                  </div>
+                  <span className="text-[12.5px] font-medium text-white">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </>
   );
@@ -290,7 +264,7 @@ const FALLBACK_PROVIDERS: ProviderInfo[] = [
   { id: "custom", name: "Custom", defaultBaseUrl: null, docsUrl: null },
 ];
 
-function ProvidersTab({ settings, onPatchSettings }: { settings: RuntimeSettings; onPatchSettings: SettingsScreenProps["onPatchSettings"] }) {
+function ProvidersTab({ settings, onPatchSettings, onBack }: { settings: RuntimeSettings; onPatchSettings: SettingsScreenProps["onPatchSettings"]; onBack: () => void }) {
   const [providers, setProviders] = useState<ProviderInfo[]>(FALLBACK_PROVIDERS);
   const [selected, setSelected] = useState<string>(settings.aiProvider || "openai");
   const [apiKey, setApiKey] = useState("");
@@ -298,6 +272,7 @@ function ProvidersTab({ settings, onPatchSettings }: { settings: RuntimeSettings
   const [customName, setCustomName] = useState("");
   const [model, setModel] = useState(settings.aiModel || "");
   const [models, setModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [modelQuery, setModelQuery] = useState("");
   const [testState, setTestState] = useState<{ ok: boolean | null; message: string; loading: boolean }>({ ok: null, message: "", loading: false });
   const [saveLoading, setSaveLoading] = useState(false);
 
@@ -374,31 +349,48 @@ function ProvidersTab({ settings, onPatchSettings }: { settings: RuntimeSettings
     }
   };
 
+  const filteredModels = useMemo(
+    () => {
+      const q = modelQuery.trim().toLowerCase();
+      if (!q) return models;
+      return models.filter((m) => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q));
+    },
+    [models, modelQuery],
+  );
+
   const handleSave = async () => {
-    if (!apiKey.trim() && !settings.aiHasKey) {
+    const trimmedKey = apiKey.trim();
+    const trimmedBaseUrl = baseUrl.trim();
+    const trimmedModel = model.trim();
+    if (!trimmedKey && !settings.aiHasKey) {
       toast.error("API key is required");
       return;
     }
-    if (isCustom && !baseUrl.trim()) {
+    if (isCustom && !trimmedBaseUrl) {
       toast.error("Base URL is required for custom provider");
       return;
     }
-    if (!model.trim()) {
-      toast.error("Please select or enter a model");
+    if (trimmedBaseUrl && !/^https?:\/\//i.test(trimmedBaseUrl)) {
+      toast.error("Base URL must start with http:// or https://");
+      return;
+    }
+    if (!trimmedModel) {
+      toast.error("Select or enter a model");
       return;
     }
     setSaveLoading(true);
     try {
       await onPatchSettings({
         aiProvider: selected,
-        aiApiKey: apiKey.trim() || undefined,
-        aiBaseUrl: baseUrl.trim() || null,
-        aiModel: model.trim(),
+        aiApiKey: trimmedKey || undefined,
+        aiBaseUrl: trimmedBaseUrl || null,
+        aiModel: trimmedModel,
       } as UpdateRuntimeSettingsPayload);
-      toast.success(`Saved ${currentProvider?.name || selected} — ${model}`);
+      toast.success(`Connected to ${currentProvider?.name || selected} — ${trimmedModel}`);
       setApiKey("");
+      onBack();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save");
+      toast.error(toAnalystCopy(e instanceof Error ? e.message : "Failed to save provider"));
     } finally {
       setSaveLoading(false);
     }
@@ -409,7 +401,7 @@ function ProvidersTab({ settings, onPatchSettings }: { settings: RuntimeSettings
       <div>
         <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-white">Providers</h2>
         <p className="mt-1 text-[12.5px] leading-5 text-white/55">
-          Choose a ready provider, paste your key, test the connection, then pick a model. Each provider has its own folder and isolated integration.
+          Choose a ready provider, paste your key, test the connection, then pick a model each with its own folder and isolated integration
         </p>
         {settings.aiProvider && (
           <p className="mt-2 text-[12px] text-white/40">
@@ -455,7 +447,7 @@ function ProvidersTab({ settings, onPatchSettings }: { settings: RuntimeSettings
       <div className="overflow-hidden rounded-[16px] border border-white/[0.06] bg-[#1e1e1e]">
         <div className="border-b border-white/[0.06] px-4 py-3">
           <p className="text-[13px] font-medium text-white">{currentProvider?.name || "Custom"} settings</p>
-          <p className="mt-1 text-[12px] text-white/50">Paste your key, test, then choose a model. Keys are encrypted before storage.</p>
+          <p className="mt-1 text-[12px] text-white/50">Paste your key, test, then choose a model — keys are encrypted before storage</p>
         </div>
 
         <div className="space-y-3 p-4">
@@ -512,17 +504,31 @@ function ProvidersTab({ settings, onPatchSettings }: { settings: RuntimeSettings
               </button>
             </div>
             {models.length > 0 && (
-              <div className="mt-2 max-h-[160px] overflow-y-auto rounded-lg border border-white/10 bg-[#232323] p-1">
-                {models.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => setModel(m.id)}
-                    className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[12px] ${model === m.id ? "bg-white/[0.08] text-white" : "text-white/70 hover:bg-white/[0.04] hover:text-white"}`}
-                  >
-                    <span className="truncate">{m.id}</span>
-                    <span className="ml-2 shrink-0 text-[11px] text-white/30">{m.name !== m.id ? m.name.slice(0, 20) : ""}</span>
-                  </button>
-                ))}
+              <div className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-[#232323]">
+                <input
+                  value={modelQuery}
+                  onChange={(e) => setModelQuery(e.target.value)}
+                  placeholder="Type to filter models…"
+                  autoComplete="off"
+                  className="w-full border-b border-white/10 bg-transparent px-3 py-2 text-[12.5px] text-white placeholder:text-white/30 focus:outline-none"
+                />
+                {filteredModels.length > 0 ? (
+                  <div className="max-h-[200px] overflow-y-auto p-1">
+                    {filteredModels.map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => { setModel(m.id); setModelQuery(""); }}
+                        title={m.id}
+                        className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[12px] ${model === m.id ? "bg-white/[0.08] text-white" : "text-white/70 hover:bg-white/[0.04] hover:text-white"}`}
+                      >
+                        <span className="truncate">{m.id}</span>
+                        {m.name !== m.id ? <span className="ml-2 shrink-0 text-[11px] text-white/30">{m.name.slice(0, 20)}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-3 py-2 text-[12px] text-white/40">No models match “{modelQuery.trim()}”</div>
+                )}
               </div>
             )}
           </div>
@@ -551,7 +557,7 @@ function ProvidersTab({ settings, onPatchSettings }: { settings: RuntimeSettings
           </div>
 
           <p className="text-[11px] leading-4 text-white/30">
-            Test does a live call to <span className="text-white/50">{currentProvider?.defaultBaseUrl || baseUrl || "your URL"}</span> — no fake data. The key is encrypted with Fernet before storage and never sent back as plain text.
+            Test does a live call to <span className="text-white/50">{currentProvider?.defaultBaseUrl || baseUrl || "your URL"}</span> — no fake data, and the key is encrypted with Fernet before storage
           </p>
         </div>
       </div>

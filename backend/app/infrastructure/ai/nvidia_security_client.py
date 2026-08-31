@@ -36,6 +36,24 @@ _PROVIDER_NEXT_REQUEST_AT_BY_KEY: dict[str, float] = {}
 _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL = 0.0
 _PROVIDER_RATE_LIMIT_COOLDOWN_UNTIL_BY_KEY: dict[str, float] = {}
 
+# Task names the scan engine routes through the AI transport. When the user saves
+# a single model in Settings, every task must route to it so the chosen model is
+# actually used instead of the env-configured defaults.
+RUNTIME_TASK_MODELS = (
+    "repository_map",
+    "path_review",
+    "finding_validate",
+    "verdict",
+    "penetration_test",
+    "explain",
+    "fix_draft",
+    "fix_retry",
+    "fix_validate",
+    "patch_validate",
+    "final_patch",
+    "json_repair",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class _ProviderTarget:
@@ -48,18 +66,36 @@ class _ProviderTarget:
 
 
 class NvidiaSecurityClient(SecurityAnalysisAIClient):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        api_keys: tuple[str, ...] | None = None,
+        base_url: str | None = None,
+        task_models: dict[str, str] | None = None,
+        allow_fallbacks: bool = True,
+    ) -> None:
         settings = get_settings()
         self.provider_name = "nvidia"
-        self.api_keys = _resolve_nvidia_api_keys(settings)
-        self.base_url = settings.nvidia_base_url.rstrip("/")
+        # Runtime-configured clients (settings saved in the Settings screen) take
+        # precedence over env config so the saved model/key/URL are actually used
+        self.api_keys = tuple(api_keys) if api_keys else _resolve_nvidia_api_keys(settings)
+        self.base_url = (base_url or settings.nvidia_base_url).rstrip("/")
         self.small_model = _resolve_nvidia_model(settings, tier="small")
         self.large_model = _resolve_nvidia_model(settings, tier="large")
+        overrides = _build_task_model_overrides(settings)
+        if task_models:
+            overrides.update(
+                {
+                    str(task_name).strip(): str(model).strip()
+                    for task_name, model in task_models.items()
+                    if str(task_name).strip() and str(model).strip()
+                }
+            )
         self.model_router = ModelRouter(
             small_model=self.small_model,
             large_model=self.large_model,
-            overflow_model=settings.nvidia_overflow_model,
-            task_overrides=_build_task_model_overrides(settings),
+            overflow_model=None if not allow_fallbacks else settings.nvidia_overflow_model,
+            task_overrides=overrides,
         )
         self.enable_thinking = settings.nvidia_enable_thinking
         self.request_timeout_seconds = settings.nvidia_timeout_seconds
@@ -959,7 +995,20 @@ def _extract_provider_message(body: dict | None) -> str:
         detail = body.get("detail")
         if isinstance(detail, str) and detail.strip():
             return detail.strip()
-    return "Unknown provider error."
+    return "Unknown provider error"
+
+
+def _short_reason(message: str) -> str:
+    # Keep the provider reason readable but trim provider-specific internals like
+    # account or function ids that add noise for the user.
+    stripped = message.strip().lstrip("'").lstrip('"')
+    if not stripped:
+        return "the model or function was not found"
+    # Drop trailing portion after 'for account' so account ids never surface.
+    marker = stripped.lower().find("for account")
+    if marker >= 0:
+        stripped = stripped[:marker].rstrip(":., '\"")
+    return stripped or "the model or function was not found"
 
 
 def _retry_after_seconds(response: httpx.Response) -> float | None:
@@ -1155,8 +1204,24 @@ def _map_provider_http_error(provider_name: str, response: httpx.Response) -> Ex
             status_code=status_code,
             failure_kind="upstream",
         )
+    if status_code == 404 or "not found" in normalized or "not found for account" in normalized or "not authorized" in normalized or "does not exist" in normalized:
+        return ExternalAIServiceError(
+            f"The configured model is not available for this {provider_label} account: {_short_reason(message)}",
+            provider=provider_name,
+            retryable=False,
+            status_code=status_code,
+            failure_kind="model_unavailable",
+        )
+    if status_code in {401, 403} or "unauthorized" in normalized or "authentication" in normalized or "api key" in normalized:
+        return ExternalAIServiceError(
+            f"The API key was rejected by {provider_label} — check that the key is valid for your account",
+            provider=provider_name,
+            retryable=False,
+            status_code=status_code,
+            failure_kind="auth",
+        )
     return ExternalAIServiceError(
-        f"{provider_label} rejected the remediation or scan request: {message}",
+        f"{provider_label} rejected the request because of an invalid configuration",
         provider=provider_name,
         retryable=False,
         status_code=status_code,

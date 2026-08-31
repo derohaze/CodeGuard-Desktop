@@ -7,7 +7,6 @@ import {
   ProgressBarTrack,
   ProgressBarValue,
 } from "@/components/ui/progress-bar";
-import { ShinyText } from "@/components/ui/shiny-text";
 import type { ScanSessionDetail } from "@/shared/api/security";
 import { toAnalystCopy } from "@/shared/lib/analyst-copy";
 import { Loader } from "@/shared/ui/Loader";
@@ -19,11 +18,9 @@ interface ScanProgressScreenProps {
 export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
   const isFailed = session?.session.status === "failed";
   const isActive = session?.session.status === "queued" || session?.session.status === "scanning";
-  const currentLine = toAnalystCopy(session?.session.progressMessage ?? "Waiting for analysis updates...");
+  const currentLine = toAnalystCopy(session?.session.progressMessage ?? "Waiting for review updates...");
   const [revealedLineCount, setRevealedLineCount] = useState(0);
   const [activeLineCharCount, setActiveLineCharCount] = useState(0);
-  const [showLogTopFade, setShowLogTopFade] = useState(false);
-  const [showLogBottomFade, setShowLogBottomFade] = useState(false);
   const lastSessionIdRef = useRef<string | null>(null);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const stickToBottomRef = useRef(true);
@@ -49,7 +46,7 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
 
   const stageLines = useMemo(() => {
     if (!session) {
-      return ["Waiting for analysis to start..."];
+      return ["Waiting for review to start..."];
     }
 
     return buildLiveStageLines(session.session.progressLogs, currentLine);
@@ -118,20 +115,18 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
     const container = logContainerRef.current;
     if (!container) return;
 
-    const updateLogFades = () => {
+    const updateStickToBottom = () => {
       const maxScrollTop = Math.max(container.scrollHeight - container.clientHeight, 0);
       stickToBottomRef.current = maxScrollTop - container.scrollTop <= 32;
-      setShowLogTopFade(container.scrollTop > 4);
-      setShowLogBottomFade(maxScrollTop - container.scrollTop > 4);
     };
 
-    updateLogFades();
-    container.addEventListener("scroll", updateLogFades);
-    window.addEventListener("resize", updateLogFades);
+    updateStickToBottom();
+    container.addEventListener("scroll", updateStickToBottom);
+    window.addEventListener("resize", updateStickToBottom);
 
     return () => {
-      container.removeEventListener("scroll", updateLogFades);
-      window.removeEventListener("resize", updateLogFades);
+      container.removeEventListener("scroll", updateStickToBottom);
+      window.removeEventListener("resize", updateStickToBottom);
     };
   }, [visibleStageLines.length, activeLineCharCount, revealedLineCount]);
 
@@ -140,16 +135,18 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.16, ease: "linear" }}
-      className="hide-scrollbar flex min-h-0 flex-1 items-start justify-center overflow-y-auto bg-surface px-6 py-10 pb-16"
+      transition={{ duration: 0.16, ease: "linear" }}          className="hide-scrollbar flex min-h-0 flex-1 items-start justify-center overflow-y-auto bg-surface px-6 py-10 pb-16"
     >
       <div className="mx-auto flex w-full max-w-[860px] flex-col items-center">
-        <h2 className="text-center text-[30px] font-semibold tracking-[-0.03em] text-txt-primary">
-          Analyzing your codebase security
+        <p className="text-center text-[13px] font-medium uppercase tracking-[0.16em] text-txt-tertiary">
+          {isFailed ? "Review failed" : "Live code review"}
+        </p>
+        <h2 className="mt-2 text-center text-[28px] font-semibold tracking-[-0.03em] text-txt-primary">
+          {isFailed ? "The review could not be completed" : "Reviewing your codebase for security issues"}
         </h2>
 
-        <p className="mt-3 max-w-[560px] text-center text-[15px] leading-7 text-txt-secondary">
-          Inspecting repository structure, data flow, and active review signals.
+        <p className="mt-3 max-w-[560px] text-center text-[14px] leading-7 text-txt-secondary">
+          {isFailed ? "Open Settings → Providers to verify the model and API key, then run the review again" : "Inspecting repository structure, data flow, and active review signals"}
         </p>
 
         <div className="mt-10 w-full">
@@ -157,7 +154,7 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
             <ProgressBarHeader>
               <Label className="inline-flex items-center gap-2">
                 {!isFailed && isActive && <Loader variant="spin" className="size-3.5 text-txt-primary" />}
-                {isFailed ? "Security analysis failed" : "Codebase analysis in progress"}
+                {isFailed ? "Code review failed" : "Codebase review in progress"}
               </Label>
               <ProgressBarValue />
             </ProgressBarHeader>
@@ -195,7 +192,7 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
           <div className="mt-4 grid w-full gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <ProgressInfoCard
               label="Mode and phase"
-              value={session.session.scanMode === "deep" ? "Deep analysis" : "Fast analysis"}
+              value={session.session.scanMode === "deep" ? "Deep review" : "Fast review"}
               note={`${session.session.currentPhase} · ${formatElapsedSeconds(liveElapsedSeconds)}`}
             />
             <ProgressInfoCard
@@ -220,51 +217,31 @@ export function ScanProgressScreen({ session }: ScanProgressScreenProps) {
           className="mt-6 w-full overflow-hidden rounded-[22px] border bg-card"
           style={{ borderColor: "hsl(var(--border-soft))" }}
         >
-          <div className="relative">
-            {showLogTopFade && (
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-7 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,255,255,0))]" />
-            )}
-            {showLogBottomFade && (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-8 bg-[linear-gradient(0deg,rgba(255,255,255,0.98),rgba(255,255,255,0))]" />
-            )}
-            <div ref={logContainerRef} className="hide-scrollbar max-h-[360px] min-h-[220px] overflow-y-auto px-5 py-5">
-              <div className="space-y-2.5">
-                {visibleStageLines.map((line, index) => (
-                  <div
-                    key={`stage-line-${index}`}
-                    className="flex items-start gap-3 text-sm text-txt-secondary"
-                  >
-                    {index === visibleStageLines.length - 1 ? (
-                      <Loader variant="spin" className="mt-[6px] size-3 shrink-0 text-txt-tertiary" />
-                    ) : (
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-txt-tertiary" />
-                    )}
-                    {index === visibleStageLines.length - 1 ? (
-                      <ShinyText
-                        text={line}
-                        speed={2}
-                        delay={0.1}
-                        spread={30}
-                        color="#222222"
-                        shineColor="#ffffff"
-                        direction="left"
-                        yoyo={false}
-                        pauseOnHover
-                        className="min-w-0 break-words leading-7 text-txt-primary"
-                      />
-                    ) : (
-                      <span className="min-w-0 break-words leading-7">{line}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
+          <div ref={logContainerRef} className="hide-scrollbar max-h-[360px] min-h-[220px] overflow-y-auto px-5 py-5">
+            <div className="space-y-2.5">
+              {visibleStageLines.map((line, index) => (
+                <div
+                  key={`stage-line-${index}`}
+                  className="flex items-start gap-3 text-[13.5px] leading-6 text-txt-secondary"
+                >
+                  {index === visibleStageLines.length - 1 && !isFailed ? (
+                    <Loader variant="spin" className="mt-[5px] size-3 shrink-0 text-txt-tertiary" />
+                  ) : (
+                    <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-txt-tertiary" />
+                  )}
+                  <span className={`min-w-0 break-words leading-6 ${index === visibleStageLines.length - 1 && !isFailed ? "text-txt-primary" : ""}`}>
+                    {toAnalystCopy(line)}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         {isFailed && session?.errorMessage && (
-          <div className="mt-5 w-full rounded-lg border border-status-critical/20 bg-[#fff8f6] px-5 py-4 text-sm text-status-critical">
-            {toAnalystCopy(session.errorMessage)}
+          <div className="mt-5 w-full rounded-xl border px-5 py-4 text-sm leading-6" style={{ borderColor: "hsl(var(--status-critical) / 0.25)" }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-status-critical">What went wrong</p>
+            <p className="mt-1.5 text-status-critical">{toAnalystCopy(session.errorMessage)}</p>
           </div>
         )}
       </div>
@@ -473,7 +450,7 @@ function buildLiveStageLines(progressLogs: string[], currentLine: string) {
     nextLines.push(currentLine.trim());
   }
 
-  return nextLines.length > 0 ? nextLines : ["Analysis is preparing the next live update..."];
+  return nextLines.length > 0 ? nextLines : ["Review is preparing the next live update..."];
 }
 
 function normalizeStageLine(value: string) {
@@ -512,7 +489,7 @@ function describePhaseCounters(
   counters: Record<string, number | string> | null | undefined,
 ) {
   if (!counters) {
-    return "Waiting for live work-unit counters.";
+    return "Waiting for live work-unit counters";
   }
 
   if (phase === "Discovery") {
@@ -543,7 +520,7 @@ function describePhaseCounters(
   if (phase === "Scoring") {
     return `${numberValue(counters.artifacts_finalized)}/${numberValue(counters.artifacts_total)} scoring artifacts finalized`;
   }
-  return "Awaiting the next work-unit update.";
+  return "Awaiting the next work-unit update";
 }
 
 function numberValue(value: number | string | undefined) {
@@ -558,7 +535,7 @@ function buildCoverageDisplay(
   if (!session) {
     return {
       value: "Waiting for coverage",
-      note: "Coverage counters begin after repository review starts.",
+      note: "Coverage counters begin after repository review starts",
     };
   }
 
@@ -567,7 +544,7 @@ function buildCoverageDisplay(
   if (!reviewHasStarted) {
     return {
       value: "Coverage pending",
-      note: "Coverage metrics will appear once prioritized files enter active review.",
+      note: "Coverage metrics will appear once prioritized files enter active review",
     };
   }
 
@@ -597,37 +574,37 @@ function buildPathDisplay(session: ScanSessionDetail | null, metrics: AnimatedMe
   if (session.session.status === "completed" && reviewedPaths <= 0 && candidatePaths <= 0) {
     return {
       value: "No path candidates",
-      note: "Path tracing ran but found no source-to-sink candidates in this run.",
+      note: "Path tracing ran but found no source-to-sink candidates in this run",
     };
   }
   if ((phase === "Discovery" || phase === "Repository mapping" || phase === "Segmentation") && candidatePaths <= 0 && reviewedPaths <= 0) {
     return {
       value: "Path tracing pending",
-      note: "Path inventory appears after segmentation completes.",
+      note: "Path inventory appears after segmentation completes",
     };
   }
   if (preparedPathsTotal > 0 && reviewedPaths <= 0 && candidatePaths <= 0) {
     return {
       value: `${preparedPaths}/${preparedPathsTotal} paths prepared`,
-      note: "Tracing is building candidate source-to-sink paths.",
+      note: "Tracing is building candidate source-to-sink paths",
     };
   }
   if (phase === "Reviewing paths" && reviewedPaths <= 0 && candidatePaths <= 0 && totalPaths <= 0) {
     return {
       value: "Path review pending",
-      note: "Review starts after path inventory is available.",
+      note: "Review starts after path inventory is available",
     };
   }
   if (reviewedPaths <= 0 && candidatePaths > 0) {
     return {
       value: `${candidatePaths} candidate paths`,
-      note: "Inventory prepared.",
+      note: "Inventory prepared",
     };
   }
   if (reviewedPaths <= 0 && totalPaths <= 0) {
     return {
       value: "Path review pending",
-      note: "No reviewable path inventory has been reported yet.",
+      note: "No reviewable path inventory has been reported yet",
     };
   }
   return {
@@ -643,54 +620,54 @@ function buildPhaseSnapshot(
   if (!session || !counters) {
     return {
       value: "Awaiting work units",
-      note: "Live analysis counters will appear as soon as discovery starts.",
+      note: "Live review counters will appear as soon as discovery starts",
     };
   }
 
   if (session.session.currentPhase === "Discovery") {
     return {
       value: `${numberValue(counters.files_indexed)}/${numberValue(counters.files_total)} files indexed`,
-      note: "Repository discovery is building the file inventory.",
+      note: "Repository discovery is building the file inventory",
     };
   }
   if (session.session.currentPhase === "Repository mapping") {
     return {
       value: `${numberValue(counters.mapping_artifacts_ready || counters.mapping_units_completed)}/${numberValue(counters.mapping_artifacts_total || counters.mapping_units_total)} artifacts ready`,
-      note: "Repository structure, dependency markers, and review metadata are being prepared.",
+      note: "Repository structure, dependency markers, and review metadata are being prepared",
     };
   }
   if (session.session.currentPhase === "Segmentation") {
     return {
       value: `${numberValue(counters.files_segmented)}/${numberValue(counters.files_to_segment)} files segmented`,
-      note: "The review queue is being narrowed to code blocks and high-risk path units.",
+      note: "The review queue is being narrowed to code blocks and high-risk path units",
     };
   }
   if (session.session.currentPhase === "Path tracing") {
     return {
       value: `${numberValue(counters.paths_prepared)}/${numberValue(counters.paths_total)} paths prepared`,
-      note: `${numberValue(counters.review_items_prepared)}/${numberValue(counters.review_items_total)} review items are queued for analysis.`,
+      note: `${numberValue(counters.review_items_prepared)}/${numberValue(counters.review_items_total)} review items are queued for review`,
     };
   }
   if (session.session.currentPhase === "Reviewing paths") {
     return {
       value: `${numberValue(counters.review_batches_completed)}/${numberValue(counters.review_batches_total)} batches completed`,
-      note: "Active review is progressing through prioritized code paths.",
+      note: "Active review is progressing through prioritized code paths",
     };
   }
   if (session.session.currentPhase === "Validation") {
     return {
       value: `${numberValue(counters.candidates_validated)}/${numberValue(counters.candidates_total)} candidates validated`,
-      note: "Candidate findings are being confirmed before reporting.",
+      note: "Candidate findings are being confirmed before reporting",
     };
   }
   if (session.session.currentPhase === "Scoring") {
     return {
       value: `${numberValue(counters.artifacts_finalized)}/${numberValue(counters.artifacts_total)} score artifacts ready`,
-      note: "Coverage and evidence summaries are being finalized.",
+      note: "Coverage and evidence summaries are being finalized",
     };
   }
   return {
     value: session.session.currentPhase,
-    note: "Awaiting the next live work-unit update.",
+    note: "Awaiting the next live work-unit update",
   };
 }

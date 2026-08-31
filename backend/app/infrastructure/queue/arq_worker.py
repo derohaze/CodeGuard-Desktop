@@ -11,6 +11,8 @@ from app.infrastructure.services.scan.scan_execution_service import ScanExecutio
 from app.infrastructure.services.workflow.workflow_persistence import WorkflowPersistenceService
 from app.infrastructure.repositories.mongo_audit_event_repository import MongoAuditEventRepository
 from app.infrastructure.repositories.mongo_verification_run_repository import MongoVerificationRunRepository
+from app.infrastructure.settings.runtime_settings_repository import RuntimeSettingsRepository
+from app.infrastructure.settings.runtime_settings_service import RuntimeSettingsService
 
 
 async def run_scan_job(_ctx: dict, session_id: str, job_id: str) -> None:
@@ -23,6 +25,9 @@ async def run_scan_job(_ctx: dict, session_id: str, job_id: str) -> None:
             verification_runs=MongoVerificationRunRepository(),
         ),
         ScanLockManager(),
+        RuntimeSettingsService(
+            RuntimeSettingsRepository(),
+        ),
     )
     await service.run(session_id, job_id=job_id)
 

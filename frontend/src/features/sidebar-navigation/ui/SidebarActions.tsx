@@ -20,7 +20,7 @@ export function SidebarActions({
         }`}
       >
         <HugeiconsIcon icon={Shield01Icon} size={14} strokeWidth={1.7} color="currentColor" className="text-txt-secondary" />
-        <span>Security Analyst</span>
+        <span>Code Review</span>
       </button>
     </div>
   );

@@ -154,7 +154,7 @@ function buildRecommendedAction(remediationStatus: Finding["remediationStatus"])
     case "patch_generated":
       return "Review the proposed patch and approve it only if it matches the traced sink and the required security strategy.";
     case "verified_fixed":
-      return "Treat the patched file as fixed, then re-run the broader analysis before closing repository-level risk.";
+      return "Treat the patched file as fixed, then re-run the broader review before closing repository-level risk.";
     case "verified_partial":
       return "Keep the finding open until follow-up verification or a stronger patch confirms the vulnerable path is fully closed.";
     case "validation_failed":
@@ -456,7 +456,7 @@ function buildPatchRolloutGuidance({
   if (patch?.residualRisks?.length) {
     return "Review residual risks before rollout; the diff improves the traced path but may not eliminate all related exposure.";
   }
-  return "The patch is scoped to the traced file and should be re-verified through a fresh analysis run after application.";
+  return "The patch is scoped to the traced file and should be re-verified through a fresh review run after application.";
 }
 
 function buildPatchDecisionStatus({
@@ -621,7 +621,7 @@ function buildRiskFactors(finding: Finding, touchesIdentity: boolean): string[] 
   } else if (finding.remediationStatus === "verified_partial" || finding.remediationStatus === "validation_failed") {
     factors.push("The current remediation state is incomplete, so the issue should stay open until a stronger result is confirmed.");
   } else {
-    factors.push("The finding is still tied to a concrete source-to-sink path in the validated analysis result.");
+    factors.push("The finding is still tied to a concrete source-to-sink path in the validated review result.");
   }
   return factors;
 }

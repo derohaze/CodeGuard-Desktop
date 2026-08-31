@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { explainFinding, getRepoHotspots, getTeamPostureSummary } from "./security";
+import { explainFinding, getRepoHotspots } from "./security";
 
 describe("security API error handling", () => {
   afterEach(() => {
@@ -76,35 +76,4 @@ describe("security API error handling", () => {
     ]);
   });
 
-  it("maps team posture summary responses into camel-case fields", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: {
-        get: vi.fn().mockReturnValue("application/json"),
-      },
-      json: vi.fn().mockResolvedValue({
-        session_count: 10,
-        hotspot_count: 4,
-        critical_hotspots: 2,
-        control_drag: 3,
-        risk_drag: 4,
-        coverage_drag: 1,
-        throughput_drag: 2,
-        top_hotspot_label: "critical - auth-service",
-      }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(getTeamPostureSummary()).resolves.toEqual({
-      sessionCount: 10,
-      hotspotCount: 4,
-      criticalHotspots: 2,
-      controlDrag: 3,
-      riskDrag: 4,
-      coverageDrag: 1,
-      throughputDrag: 2,
-      topHotspotLabel: "critical - auth-service",
-    });
-  });
 });

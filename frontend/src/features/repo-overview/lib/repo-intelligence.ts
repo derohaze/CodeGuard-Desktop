@@ -32,8 +32,8 @@ export function buildRepoHotspots(session: ScanSessionDetail): RepoHotspot[] {
       label: "Identity surfaces",
       hotspotClass: "identity-zone",
       priority: identityCount >= 3 ? "critical" : "high",
-      evidence: `${identityCount} identity and auth signal(s) tracked in the current repository run.`,
-      nextInvestigation: "Review auth and session trust boundaries before expanding autonomous behavior.",
+      evidence: `${identityCount} identity and auth signal(s) tracked in the current repository run`,
+      nextInvestigation: "Review auth and session trust boundaries before expanding autonomous behavior"
     });
   }
 
@@ -44,8 +44,8 @@ export function buildRepoHotspots(session: ScanSessionDetail): RepoHotspot[] {
       label: "Exposure boundaries",
       hotspotClass: "exposure-zone",
       priority: exposureCount >= 4 ? "critical" : "high",
-      evidence: `${exposureCount} external or trust-boundary signal(s) are active in the repository graph.`,
-      nextInvestigation: "Validate the exposed service edges before treating current posture as stable.",
+      evidence: `${exposureCount} external or trust-boundary signal(s) are active in the repository graph`,
+      nextInvestigation: "Validate the exposed service edges before treating current posture as stable"
     });
   }
 
@@ -56,8 +56,8 @@ export function buildRepoHotspots(session: ScanSessionDetail): RepoHotspot[] {
       label: "Input and sink pressure",
       hotspotClass: "data-zone",
       priority: dataCount >= 5 ? "high" : "normal",
-      evidence: `${dataCount} input and sink signal(s) remain in the current security registry.`,
-      nextInvestigation: "Correlate high-pressure inputs with sinks and traced paths before reducing review depth.",
+      evidence: `${dataCount} input and sink signal(s) remain in the current security registry`,
+      nextInvestigation: "Correlate high-pressure inputs with sinks and traced paths before reducing review depth"
     });
   }
 
@@ -67,8 +67,8 @@ export function buildRepoHotspots(session: ScanSessionDetail): RepoHotspot[] {
       label: "Coverage gaps",
       hotspotClass: "coverage-zone",
       priority: session.session.coveragePercent < 85 ? "high" : "normal",
-      evidence: `${session.session.coveragePercent}% coverage with ${session.session.skippedFilesCount} skipped file(s) in the current run.`,
-      nextInvestigation: "Close repository coverage gaps before trusting repo-wide posture conclusions.",
+      evidence: `${session.session.coveragePercent}% coverage with ${session.session.skippedFilesCount} skipped file(s) in the current run`,
+      nextInvestigation: "Close repository coverage gaps before trusting repo-wide posture conclusions"
     });
   }
 
@@ -97,7 +97,7 @@ export function summarizeRepoHotspots(hotspots: RepoHotspot[]): RepoIntelligence
     exposureZones,
     dataZones,
     coverageZones,
-    topHotspotLabel: topHotspot ? `${topHotspot.priority} - ${topHotspot.label}` : "No repository hotspot",
+    topHotspotLabel: topHotspot ? `${topHotspot.priority} - ${topHotspot.label}` : "No repository hotspot"
   };
 }
 

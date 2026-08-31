@@ -261,7 +261,7 @@ export function SidebarSessionsList({
         )}
         {filteredSessions.length === 0 && (
           <div className="px-3 py-6 text-sm text-txt-tertiary">
-            No real analyst sessions yet.
+            No real review sessions yet
           </div>
         )}
       </div>

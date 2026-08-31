@@ -38,7 +38,7 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   }
 
   if (signal.aborted) {
-    return Promise.reject(new DOMException("The operation was aborted.", "AbortError"));
+    return Promise.reject(new DOMException("The operation was aborted", "AbortError"));
   }
 
   return new Promise((resolve, reject) => {
@@ -50,7 +50,7 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     const onAbort = () => {
       globalThis.clearTimeout(timer);
       signal.removeEventListener("abort", onAbort);
-      reject(new DOMException("The operation was aborted.", "AbortError"));
+      reject(new DOMException("The operation was aborted", "AbortError"));
     };
 
     signal.addEventListener("abort", onAbort, { once: true });
@@ -89,7 +89,7 @@ async function waitForApiStartup(url: URL | null, signal?: AbortSignal): Promise
       }
     }
 
-    throw new Error("API startup probe failed.");
+    throw new Error("API startup probe failed");
   })().catch((error) => {
     startupReadyPromise = null;
     startupReadyOrigin = null;
@@ -121,5 +121,5 @@ export async function fetchWithStartupRetry(input: RequestInfo | URL, init?: Req
     }
   }
 
-  throw new Error("Startup retry loop exited unexpectedly.");
+  throw new Error("Startup retry loop exited unexpectedly");
 }

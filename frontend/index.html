@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodeGuard</title>
     <meta name="description" content="CodeGuard desktop interface for reviewing security scans and fixing issues early." />
+
+    <!--
+      Set the resolved theme before the first paint so there is no dark/light
+      flash on startup. Uses the user's saved choice when available, otherwise
+      falls back to the operating system preference. The app shell keeps this
+      in sync with the runtime setting once settings finish loading.
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = null;
+          try {
+            saved = window.localStorage.getItem("codeguard.theme");
+          } catch (e) {
+            saved = null;
+          }
+          var prefersLight = false;
+          try {
+            prefersLight = window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: light)").matches;
+          } catch (e) {
+            prefersLight = false;
+          }
+          var theme =
+            saved === "light" || saved === "dark"
+              ? saved
+              : prefersLight
+                ? "light"
+                : "dark";
+          document.documentElement.dataset.theme = theme;
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
     <meta name="author" content="CodeGuard" />
     <link rel="icon" type="image/png" href="/icon.png" />
 
