@@ -64,7 +64,7 @@ export function DecryptedText({
         intervalRef.current = null;
       }
     };
-  }, [availableChars, speed, text]);
+  }, [availableChars, revealedCount, speed, text]);
 
   useEffect(() => {
     if (revealedCount >= text.length) {

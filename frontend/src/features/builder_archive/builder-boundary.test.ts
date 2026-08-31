@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
 
 const ROOT = resolve(process.cwd(), "src");
-const BUILDER_ROOT_SEGMENT = "/src/features/builder-agent/";
+const BUILDER_ROOT_SEGMENT = "/src/features/builder_archive/";
 const CODE_FILE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 
 function walkFiles(dir: string): string[] {
@@ -49,8 +49,8 @@ describe("builder boundary rules", () => {
 
       const content = readFileSync(filePath, "utf8");
       if (
-        content.includes('from "@/features/builder-agent/') ||
-        content.includes("from '@/features/builder-agent/")
+        content.includes('from "@/features/builder_archive/') ||
+        content.includes("from '@/features/builder_archive/")
       ) {
         deepImportViolations.push(normalize(relative(ROOT, filePath)));
       }

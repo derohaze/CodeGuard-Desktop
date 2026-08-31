@@ -109,7 +109,7 @@ describe("BuilderSidebar", () => {
       vi.advanceTimersByTime(0);
     });
 
-    expect(screen.getByText("M")).toBeInTheDocument();
+    expect(screen.getAllByText("M").length).toBeGreaterThan(0);
     expect(screen.queryByText("Mind Misery")).not.toBeInTheDocument();
 
     act(() => {

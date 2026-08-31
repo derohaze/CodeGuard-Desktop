@@ -2,6 +2,7 @@ import asyncio
 import multiprocessing
 import os
 import shutil
+import socket
 import subprocess
 from multiprocessing.process import BaseProcess
 from pathlib import Path
@@ -107,6 +108,35 @@ def _stop_embedded_worker(worker_process: BaseProcess | None) -> None:
     if worker_process.is_alive():
         worker_process.kill()
         worker_process.join(timeout=5)
+
+
+def _is_port_available(host: str, port: int) -> bool:
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        probe.settimeout(0.5)
+        return probe.connect_ex((host, port)) != 0
+    finally:
+        probe.close()
+
+
+def _port_owner(port: int) -> int | None:
+    if os.name != "nt":
+        return None
+    result = subprocess.run(
+        ["netstat", "-ano", "-p", "tcp"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    suffix = f":{port}"
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 5 and fields[0].upper() == "TCP" and fields[1].endswith(suffix) and fields[3].upper() == "LISTENING":
+            try:
+                return int(fields[4])
+            except ValueError:
+                return None
+    return None
 
 
 def _loopback_host(host: str) -> str:
@@ -245,15 +275,26 @@ if __name__ == "__main__":
             f"{rust_status}",
             flush=True,
         )
-        uvicorn.run(
-            "app.main:app",
-            host=settings.app_host,
-            port=settings.app_port,
-            workers=settings.api_workers,
-            reload=reload_enabled,
-            reload_dirs=_reload_dirs() if reload_enabled else None,
-            log_config=UVICORN_LOG_CONFIG,
-        )
+        if not _is_port_available(_loopback_host(settings.app_host), settings.app_port):
+            owner = _port_owner(settings.app_port)
+            owner_text = f" (PID {owner})" if owner is not None else ""
+            print(
+                f"{GREEN}[backend-main]{RESET} {YELLOW}python-api{RESET} port "
+                f"{settings.app_port} is already in use{owner_text}. "
+                "Stop the existing process, then retry.",
+                flush=True,
+            )
+            raise SystemExit(1)
+        else:
+            uvicorn.run(
+                "app.main:app",
+                host=settings.app_host,
+                port=settings.app_port,
+                workers=settings.api_workers,
+                reload=reload_enabled,
+                reload_dirs=_reload_dirs() if reload_enabled else None,
+                log_config=UVICORN_LOG_CONFIG,
+            )
     finally:
         _stop_process(node_process)
         _stop_process(rust_process)

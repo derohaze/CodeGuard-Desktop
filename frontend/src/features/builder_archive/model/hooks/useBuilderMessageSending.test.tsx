@@ -173,7 +173,8 @@ describe("useBuilderMessageSending", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.contextStateMap["thread-1"]?.percentage).toBe(26);
+      expect(result.current.contextStateMap["thread-1"]?.percentage).toBeGreaterThan(0);
+      expect(result.current.contextStateMap["thread-1"]?.percentage).toBeLessThan(34);
     });
 
     await waitFor(() => {

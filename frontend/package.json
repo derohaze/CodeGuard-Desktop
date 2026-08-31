@@ -13,6 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "electron:dev": "concurrently \"cross-env NODE_ENV=development vite\" \"wait-on http://localhost:8080 && cross-env NODE_ENV=development electron .\"",
+    "electron:repair": "bun install --force",
+    "electron:dev:repair": "bun run electron:repair && bun run electron:dev",
     "electron:build": "vite build && electron-builder",
     "electron:build:win": "vite build && electron-builder --win"
   },

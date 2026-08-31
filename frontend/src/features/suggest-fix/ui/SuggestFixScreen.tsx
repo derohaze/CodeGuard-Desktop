@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Binary, Cloud, FileCode2, GitBranch, ShieldAlert, Sparkles } from "lucide-react";
 import { ShinyText } from "@/components/ui/shiny-text";
@@ -32,6 +32,7 @@ export function SuggestFixScreen({ onComplete, onInvalidatedFinding, finding, fi
   const [showPlanDetails, setShowPlanDetails] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const applyPlanRef = useRef<(nextPlan: RemediationPlan) => void>(() => undefined);
   const [taskLines, setTaskLines] = useState<TaskLine[]>([
     { id: "context", title: "Building remediation context", text: "Collecting the minimal remediation context from the real analysis evidence.", type: "done", agent: "context_agent" },
     { id: "prepare", title: "Preparing orchestration", text: "Preparing the explain and fix agents.", type: "done", agent: "router" },
@@ -59,7 +60,7 @@ export function SuggestFixScreen({ onComplete, onInvalidatedFinding, finding, fi
       });
 
         if (!active) return;
-        applyPlan(plan);
+        applyPlanRef.current(plan);
     } catch (error) {
       if (!active) return;
       console.error("[CodeGuard] Failed to generate remediation plan", error);
@@ -80,7 +81,7 @@ export function SuggestFixScreen({ onComplete, onInvalidatedFinding, finding, fi
     return () => {
       active = false;
     };
-  }, [finding, findingCount, isBatch, mode, sessionId]);
+  }, [finding, findingCount, isBatch, mode, onInvalidatedFinding, sessionId]);
 
   useEffect(() => {
     if (!currentLine) {
@@ -144,7 +145,7 @@ export function SuggestFixScreen({ onComplete, onInvalidatedFinding, finding, fi
     }
   };
 
-  const applyPlan = (nextPlan: RemediationPlan) => {
+  const applyPlan = useCallback((nextPlan: RemediationPlan) => {
     const nextLines = buildTaskLines({
       mode,
       findingCount,
@@ -159,7 +160,8 @@ export function SuggestFixScreen({ onComplete, onInvalidatedFinding, finding, fi
     setIsReady(isPlanValid);
     setShowPlanDetails(false);
     setPlanError(isPlanValid ? null : buildPlanErrorMessage(nextPlan));
-  };
+  }, [finding, findingCount, mode]);
+  applyPlanRef.current = applyPlan;
 
   const handleRetry = async () => {
     if (!sessionId) return;

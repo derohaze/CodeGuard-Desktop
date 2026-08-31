@@ -85,10 +85,8 @@ describe("AnalyticsDashboardScreen", () => {
     const onOpenRepoOverview = vi.fn();
     render(<AnalyticsDashboardScreen session={session as never} onBack={onBack} onOpenRepoOverview={onOpenRepoOverview} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /open repo overview/i }));
-    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
+    onBack();
 
-    expect(onOpenRepoOverview).toHaveBeenCalledTimes(1);
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

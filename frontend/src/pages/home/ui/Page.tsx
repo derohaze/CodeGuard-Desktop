@@ -1371,10 +1371,6 @@ function SessionWorkspaceTabs({
   tabs: Array<{ screen: AppScreen; label: string }>;
   onNavigate: (screen: AppScreen) => void;
 }) {
-  if (!session) {
-    return null;
-  }
-
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{ active: boolean; startX: number; startScrollLeft: number; moved: boolean }>({
     active: false,
@@ -1450,6 +1446,10 @@ function SessionWorkspaceTabs({
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
   }, [handleMouseMove, handleMouseRelease, isDraggingTabs]);
+
+  if (!session) {
+    return null;
+  }
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     const container = scrollRef.current;

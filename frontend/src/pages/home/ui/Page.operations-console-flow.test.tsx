@@ -166,7 +166,7 @@ describe("Page operations console flow", () => {
     expect((await screen.findAllByText(/session memory ledger/i)).length).toBeGreaterThan(0);
     expect(await screen.findByText(/recommendation reuse queue/i)).toBeInTheDocument();
     expect(await screen.findByText(/memory carry-forward/i)).toBeInTheDocument();
-    expect(await screen.findByText(/learning loop signals/i)).toBeInTheDocument();
+    expect(await screen.findByText(/remediation history signals/i)).toBeInTheDocument();
     expect(await screen.findByText(/self-healing controller queue/i)).toBeInTheDocument();
     expect(await screen.findByText(/autonomous control plan/i)).toBeInTheDocument();
     expect(await screen.findByText(/continuous remediation workflow/i)).toBeInTheDocument();
