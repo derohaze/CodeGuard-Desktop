@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Run the Aegix penetration testing benchmark.
+"""Run the CodeGuard penetration testing benchmark.
 
 This benchmark:
 1. Starts the vulnerable test API on port 9000

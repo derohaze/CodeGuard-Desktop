@@ -1,4 +1,4 @@
-Shared remediation policy for Aegix:
+Shared remediation policy for CodeGuard:
 
 - Prefer complete sink-level or service-layer fixes over router-only filtering.
 - Distinguish clearly between:

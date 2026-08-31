@@ -8,8 +8,8 @@ const INITIAL_WINDOW_WIDTH = 1120;
 const INITIAL_WINDOW_HEIGHT = 720;
 const MIN_WINDOW_WIDTH = 980;
 const MIN_WINDOW_HEIGHT = 640;
-const APP_NAME = 'Aegix';
-const APP_ID = 'com.aegix.desktop';
+const APP_NAME = 'CodeGuard';
+const APP_ID = 'com.codeguard.desktop';
 const APP_ICON_PATH = process.platform === 'win32'
   ? path.join(__dirname, '../public/icon.ico')
   : path.join(__dirname, '../public/icon.png');

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Aegix penetration testing benchmark framework.
+"""CodeGuard penetration testing benchmark framework.
 
 Measures agent performance across:
 - Findings discovered (vs ground truth)

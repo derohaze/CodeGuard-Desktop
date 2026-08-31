@@ -84,7 +84,7 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
             {safeVerdict ? "No validated security issue was confirmed in the selected scope." : "Validated repository assessment"}
           </p>
           <p className="mt-2 text-sm leading-6 text-txt-secondary">
-            {toAnalystCopy(session.session.repositorySummary) || (safeVerdict ? "The selected source was reviewed and no high-confidence issue was confirmed." : "Aegix completed the repository assessment.")}
+            {toAnalystCopy(session.session.repositorySummary) || (safeVerdict ? "The selected source was reviewed and no high-confidence issue was confirmed." : "CodeGuard completed the repository assessment.")}
           </p>
           {!hasFindings && hasCoverageGap && (
             <p className="mt-2 text-sm leading-6 text-txt-secondary">
@@ -337,7 +337,7 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
           <InfoSummaryCard
             label="Analysis mode"
             value={session.session.scanMode === "deep" ? "Deep analysis" : "Fast analysis"}
-            note={String(session.session.scanPlan?.work_unit_strategy?.paths ?? "Path-centric review")}
+            note={getScanPlanWorkUnitStrategyPaths(session.session.scanPlan) ?? "Path-centric review"}
           />
           <InfoSummaryCard
             label="Review queue"
@@ -380,14 +380,14 @@ export function ScanResultsScreen({ session, onSelectFinding }: Props) {
               emptyMessage="No distinct defensive observation was captured for this run."
             />
             <AnalystListCard
-              label="What Aegix could not verify"
+              label="What CodeGuard could not verify"
               intro="These are real analysis limits from the reviewed run, not proof that the code is unsafe."
               items={analysisBrief.analysisLimitations}
               emptyMessage="No major verification limit was surfaced for this run."
             />
             <AnalystListCard
               label="If I were attacking this"
-              intro="Attack probes Aegix would prioritize next against the reviewed surfaces."
+              intro="Attack probes CodeGuard would prioritize next against the reviewed surfaces."
               items={analysisBrief.attackThinking}
               emptyMessage="No additional attack probe was highlighted beyond the reviewed surfaces."
             />
@@ -620,6 +620,14 @@ function getExcludedFiles(coverageSnapshot: Record<string, unknown> | null): Arr
       return { file, reason };
     })
     .filter((item): item is { file: string; reason: string } => item !== null);
+}
+
+function getScanPlanWorkUnitStrategyPaths(scanPlan: Record<string, unknown> | null): string | null {
+  if (!scanPlan || typeof scanPlan !== "object") return null;
+  const workUnitStrategy = scanPlan["work_unit_strategy"];
+  if (!workUnitStrategy || typeof workUnitStrategy !== "object") return null;
+  const paths = (workUnitStrategy as Record<string, unknown>).paths;
+  return paths != null ? String(paths) : null;
 }
 
 function FindingsCard({

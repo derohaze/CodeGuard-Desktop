@@ -54,7 +54,7 @@ from app.infrastructure.services.scan.risk_prioritization import prioritize_revi
 from app.infrastructure.services.repository.source_sink_registry import build_source_sink_registry
 from app.infrastructure.services.scan.penetration_sandbox import prepare_penetration_sandbox
 
-logger = logging.getLogger("aegix.scan")
+logger = logging.getLogger("codeguard.scan")
 
 
 def create_initial_session(source_path: str, target_type: str, preset: str, scan_mode: str = "deep", interactive: bool = True) -> ScanSessionEntity:
@@ -1445,7 +1445,7 @@ class ScanExecutionService:
 def _build_scan_failure_message(exc: Exception) -> str:
     if isinstance(exc, ExternalAIServiceError):
         return sanitize_runtime_error(exc, operation="scan")
-    return "The scan failed because Aegix could not complete its AI analysis. Check the server logs and retry the request."
+    return "The scan failed because CodeGuard could not complete its AI analysis. Check the server logs and retry the request."
 
 
 def collect_heuristic_candidates(files: list[Path], source_root: Path) -> list[dict]:
@@ -1892,11 +1892,11 @@ def build_repository_summary(profile: dict, repository_artifacts: dict, findings
     coverage = repository_artifacts["coverage"]
     if not findings:
         return (
-            f"Aegix reviewed a {stack} codebase, mapped {coverage['route_files']} route files and "
+            f"CodeGuard reviewed a {stack} codebase, mapped {coverage['route_files']} route files and "
             f"{coverage['auth_files']} auth surfaces, and did not confirm a high-confidence issue in the selected scope."
         )
     return (
-        f"Aegix reviewed a {stack} codebase, mapped {coverage['route_files']} route files and "
+        f"CodeGuard reviewed a {stack} codebase, mapped {coverage['route_files']} route files and "
         f"{coverage['auth_files']} auth surfaces, and confirmed {len(findings)} validated findings."
     )
 

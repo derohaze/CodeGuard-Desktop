@@ -1,12 +1,12 @@
-class AegixError(Exception):
+class CodeGuardError(Exception):
     pass
 
 
-class InvalidSourcePathError(AegixError):
+class InvalidSourcePathError(CodeGuardError):
     pass
 
 
-class ExternalAIServiceError(AegixError):
+class ExternalAIServiceError(CodeGuardError):
     def __init__(
         self,
         message: str,
@@ -25,5 +25,5 @@ class ExternalAIServiceError(AegixError):
         self.retry_after_seconds = retry_after_seconds
 
 
-class WorkflowConflictError(AegixError):
+class WorkflowConflictError(CodeGuardError):
     pass

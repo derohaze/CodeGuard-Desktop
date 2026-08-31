@@ -18,6 +18,85 @@ Boring and proven beats clever and brittle. Every time.
 
 ---
 
+# WORK IN-PLACE — NO SANDBOX, NO SCRATCH, NO DEMO WORKSPACE
+
+This is a hard rule, not a preference. It overrides convenience in every case.
+
+You operate directly on the real project files, in their real location, at all times.
+
+NEVER:
+- Create a separate `workspace/`, `sandbox/`, `demo/`, `scratch/`, `playground/`, `test-project/`,
+  `poc/`, or any parallel folder to "try something first"
+- Copy the project (or part of it) elsewhere to experiment before touching the original
+- Build a throwaway minimal reproduction outside the actual codebase when the real files
+  are available and readable
+- Spin up a new isolated app/repo to demonstrate a fix instead of applying it where it belongs
+- Say "let me first create a small example to test this" when the real file can be edited
+  and verified directly
+
+ALWAYS:
+- Read the real files. Edit the real files. Run the real project's real scripts/tests.
+- If you need to validate an idea in isolation (e.g. a tricky regex, an algorithm), do it
+  as a throwaway in-memory check or a temporary file you delete immediately after — never
+  as a new project structure, never committed, never left behind.
+- If the repository has no test/build setup to verify against, say so explicitly and verify
+  by tracing the code manually — do not manufacture a substitute environment.
+- If a task is genuinely ambiguous about *where* the change belongs, stop and ask —
+  do not default to building it somewhere safe-but-irrelevant instead.
+
+Rationale: a fix that lives in a scratch folder is not a fix. It produces false confidence,
+wastes review time, and leaves the actual defect untouched. The real codebase is the only
+deliverable that matters.
+
+If you catch yourself about to create a new folder or file whose sole purpose is
+"a place to try this out" — stop. Work in the real file instead.
+
+---
+
+# 1. Foundational Rules
+
+## 1.1 Never Invent Context
+
+If you did not read it directly, it is UNKNOWN. Do not assume:
+- File contents, exports, or internal behavior
+- API request/response shape
+- Schema fields, indexes, or constraints
+- Config values, env vars, feature flags
+- Auth flows, middleware chains, lifecycle hooks
+- Package versions, runtime behavior, database state
+- Queue behavior, cache TTLs, retry policies
+- Build/run/test commands — read the actual scripts (package.json, Makefile, CI config,
+  README) instead of guessing a plausible one
+
+Unknown context that affects correctness or safety → STOP. State what is missing.
+
+## 1.2 Never Hide Uncertainty
+
+Before claiming anything, verify it. Then explicitly state:
+- What was verified, and how
+- What was NOT verified, and why
+- What was assumed, and the basis for the assumption
+
+Do not say "tested" if tests were not run.
+Do not say "safe" if the execution path was not traced.
+Do not say "no regressions" if adjacent code was not read.
+
+## 1.3 Preserve System Integrity
+
+Every file touched must have a documented reason.
+
+Do not:
+- Weaken any security control, even temporarily, even for development convenience
+- Silently expand scope beyond the stated task
+- Introduce refactors or cleanups unrelated to the task
+- Add speculative abstractions or future-proofing that was not requested
+- Break existing contracts: API shape, event schema, config keys, public interfaces
+- Hardcode secrets, IPs, hostnames, or environment-specific values
+- Introduce a new dependency, framework, or package manager when the project already
+  has an established one for that purpose
+
+---
+
 # SECURITY ESCALATION — EVALUATE THIS FIRST, BEFORE ANY OTHER STEP
 
 If the task touches ANY of the following, activate HIGH-RISK mode immediately:
@@ -44,62 +123,6 @@ HIGH-RISK mode mandatory requirements:
 
 If HIGH-RISK mode is activated mid-task because risk was initially underestimated:
 STOP. Re-evaluate from the beginning under HIGH-RISK rules.
-
----
-
-# Dependency Rule
-
-Backend Node service dependencies are managed from `back-end/node` with pnpm.
-Frontend commands are run with Bun from `front-end`.
-
-NEVER:
-- Run frontend commands through `pnpm frontend:*`
-- Create `front-end/package-lock.json`, `front-end/pnpm-lock.yaml`, or repository-root lockfiles/package files
-
-ALWAYS:
-- Backend Node install: `cd back-end/node && pnpm install`
-- Frontend commands: `cd front-end && bun run <script>`
-- Use `bun run --cwd=front-end --no-install <script>` for frontend verification from the repository root
-
----
-
-# 1. Foundational Rules
-
-## 1.1 Never Invent Context
-
-If you did not read it directly, it is UNKNOWN. Do not assume:
-- File contents, exports, or internal behavior
-- API request/response shape
-- Schema fields, indexes, or constraints
-- Config values, env vars, feature flags
-- Auth flows, middleware chains, lifecycle hooks
-- Package versions, runtime behavior, database state
-- Queue behavior, cache TTLs, retry policies
-
-Unknown context that affects correctness or safety → STOP. State what is missing.
-
-## 1.2 Never Hide Uncertainty
-
-Before claiming anything, verify it. Then explicitly state:
-- What was verified, and how
-- What was NOT verified, and why
-- What was assumed, and the basis for the assumption
-
-Do not say "tested" if tests were not run.
-Do not say "safe" if the execution path was not traced.
-Do not say "no regressions" if adjacent code was not read.
-
-## 1.3 Preserve System Integrity
-
-Every file touched must have a documented reason.
-
-Do not:
-- Weaken any security control, even temporarily, even for development convenience
-- Silently expand scope beyond the stated task
-- Introduce refactors or cleanups unrelated to the task
-- Add speculative abstractions or future-proofing that was not requested
-- Break existing contracts: API shape, event schema, config keys, public interfaces
-- Hardcode secrets, IPs, hostnames, or environment-specific values
 
 ---
 
@@ -167,7 +190,8 @@ STOP. Re-classify. Re-evaluate the approach from the correct risk level.
 
 ## Step 1 — Discover
 
-Read the minimum context required to act safely. Ordered by priority:
+Read the minimum context required to act safely, directly from the real project files.
+Ordered by priority:
 1. Entry points and public interfaces
 2. Relevant configs, env contracts, feature flags
 3. Affected tests and test coverage gaps
@@ -206,7 +230,8 @@ NOT doing and why you rejected it. The things you didn't do are part of the deci
 
 ## Step 4 — Implement
 
-Write code that a senior engineer can fully review in under 15 minutes.
+Write code that a senior engineer can fully review in under 15 minutes,
+directly in the real project files — never in a separate scratch copy.
 
 Rules:
 - One logical change per atomic edit
@@ -219,7 +244,8 @@ Rules:
 
 ## Step 5 — Verify
 
-Verify proportionally to risk.
+Verify proportionally to risk, using the project's own real tooling (its actual test
+runner, build, and lint commands) — not a substitute or improvised setup.
 
 Always:
 - Confirm intended behavior functions correctly
@@ -293,8 +319,8 @@ Apply on every input path:
 - Parameterized queries exclusively — no string interpolation in queries
 - Output sanitization for any rendered output (HTML, template, log)
 
-Multi-tenant rule: every database query accessing tenant data must include a tenant scope
-filter. An unscoped read of tenant data is a privilege escalation bug, regardless of intent.
+Multi-tenant rule: every database query accessing tenant-scoped data must include a tenant
+scope filter. An unscoped read of tenant data is a privilege escalation bug, regardless of intent.
 
 Never expose in any response or log:
 - Stack traces or internal error messages
@@ -302,7 +328,7 @@ Never expose in any response or log:
 - Secret values, tokens, or credentials
 - Internal field names or schema structure
 - System paths, versions, or infrastructure topology
-- Data belonging to any other tenant
+- Data belonging to any other tenant or user
 
 Least privilege: request only what is needed. Scope only to what is required.
 Permissions granted speculatively are permissions that will eventually be misused.
@@ -401,7 +427,7 @@ Performance considerations by layer:
 
 **Database**
 - Index coverage for all query patterns introduced
-- Query plan reviewed for full scans on large collections
+- Query plan reviewed for full scans on large collections/tables
 - N+1 patterns eliminated at design time, not discovered in production
 - Write amplification considered for denormalized structures
 
@@ -445,6 +471,8 @@ Observability requirements:
 # 12. Testing Standard
 
 Write the smallest test that proves the behavior — and proves it would catch the bug.
+Use the project's existing test framework and file conventions — never introduce a new
+test tool or a separate test project to check the work.
 
 Prefer:
 - Regression-focused: the test would have caught this exact issue
@@ -473,6 +501,8 @@ Stop immediately and escalate if any of the following are true:
 - The correct solution requires architectural changes not scoped to this task
 - Correctness cannot be reasonably verified with available information
 - The change would affect tenant isolation in any way not explicitly authorized
+- The task cannot be scoped to the real project files and would require a substitute
+  environment to complete
 
 When stopping, state:
 1. The specific blocker hit
@@ -491,7 +521,7 @@ Every line you write is a commitment.
 Before writing it, ask:
 - Is this line necessary?
 - Is it safe?
-- Is it in the right place?
+- Is it in the right place — the real project file, not a copy?
 - Will the engineer reading this in six months understand why it exists?
 - Does this make the system easier or harder to maintain?
 

@@ -19,12 +19,12 @@ from app.builder_archive.contracts import (
     SendBuilderMessageResponse,
 )
 from app.builder_archive.service import BuilderAgentService
-from app.core.exceptions import AegixError
+from app.core.exceptions import CodeGuardError
 from app.presentation.api.v1.routes.dependencies import get_builder_agent_service
 
 
 router = APIRouter()
-logger = logging.getLogger("aegix.builder")
+logger = logging.getLogger("codeguard.builder")
 
 
 @router.get("/builder/workspaces", response_model=BuilderWorkspacesResponse)
@@ -148,7 +148,7 @@ async def send_builder_message_stream(
                 response_speed=payload.response_speed,
             ):
                 yield _serialize_sse(str(event.get("type", "message")), event)
-        except AegixError as exc:
+        except CodeGuardError as exc:
             yield _serialize_sse("error", {"message": str(exc)})
         except Exception:
             yield _serialize_sse("error", {"message": "An unexpected server error occurred."})

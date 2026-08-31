@@ -26,14 +26,14 @@ export function buildPatchExportBundle({
   const strategyLabel = snapshot.strategyLabel ?? (snapshot.manualEdit ? "Manual edit" : "Unnamed strategy");
   const patchText = snapshot.diff.endsWith("\n") ? snapshot.diff : `${snapshot.diff}\n`;
   const summaryLines = [
-    "Aegix Export Summary",
+    "CodeGuard Export Summary",
     "",
     `Finding: ${finding.title}`,
     `Category: ${finding.category}`,
     `Severity: ${finding.severity}`,
     `File: ${snapshot.file}`,
     `Strategy: ${strategyLabel}`,
-    `Fix type: ${snapshot.fixType.replaceAll("_", " ")}`,
+    `Fix type: ${snapshot.fixType.replace("_", " ")}`,
     `Mode: ${snapshot.mode}`,
     `Manual edit applied: ${snapshot.manualEdit ? "yes" : "no"}`,
     `Verification: ${verificationLabel}`,

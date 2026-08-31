@@ -124,7 +124,7 @@ async def run_agent(label: str) -> dict:
 
 async def main():
     import argparse
-    parser = argparse.ArgumentParser(description="Aegix Penetration Test Benchmark")
+    parser = argparse.ArgumentParser(description="CodeGuard Penetration Test Benchmark")
     parser.add_argument("--both", action="store_true", help="Run before AND after comparison")
     parser.add_argument("--skip-api", action="store_true", help="Skip API startup (already running)")
     args = parser.parse_args()

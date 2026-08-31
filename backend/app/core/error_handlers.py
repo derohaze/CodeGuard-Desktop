@@ -4,17 +4,17 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.core.exceptions import AegixError
+from app.core.exceptions import CodeGuardError
 
 
-logger = logging.getLogger("aegix.api")
+logger = logging.getLogger("codeguard.api")
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    @app.exception_handler(AegixError)
-    async def handle_aegix_error(_: Request, exc: AegixError):
+    @app.exception_handler(CodeGuardError)
+    async def handle_codeguard_error(_: Request, exc: CodeGuardError):
         error_id = str(uuid4())
-        logger.warning("Handled Aegix error", extra={"error_id": error_id}, exc_info=exc)
+        logger.warning("Handled CodeGuard error", extra={"error_id": error_id}, exc_info=exc)
         return JSONResponse(
             status_code=400,
             content={

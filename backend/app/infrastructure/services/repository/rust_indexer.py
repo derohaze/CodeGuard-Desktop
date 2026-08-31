@@ -12,7 +12,7 @@ from app.core.config import get_settings
 BACKEND_ROOT = Path(__file__).resolve().parents[4]
 RUST_INDEXER_ROOT = BACKEND_ROOT / "rust-indexer"
 DEFAULT_BINARY_NAME = "codeguard-rust-indexer.exe" if os.name == "nt" else "codeguard-rust-indexer"
-logger = logging.getLogger("aegix.rust-indexer")
+logger = logging.getLogger("codeguard.rust-indexer")
 
 
 def build_native_index(source_root: Path) -> dict:

@@ -3,7 +3,7 @@ from __future__ import annotations
 """Vulnerable test API for penetration testing benchmarks.
 
 DO NOT deploy this in production. Contains intentional security flaws for
-benchmarking the Aegix penetration testing agent.
+benchmarking the CodeGuard penetration testing agent.
 
 Known vulnerabilities (ground truth for benchmark scoring):
 - V001: SQL injection in GET /api/users?search= (line ~96)

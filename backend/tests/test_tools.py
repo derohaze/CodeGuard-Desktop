@@ -107,7 +107,7 @@ class TestFileTools:
 
     @pytest.mark.asyncio
     async def test_file_write_and_edit(self):
-        tmp = os.path.join(tempfile.gettempdir(), f"aegix_test_{os.urandom(4).hex()}.txt")
+        tmp = os.path.join(tempfile.gettempdir(), f"codeguard_test_{os.urandom(4).hex()}.txt")
         try:
             w_tool = FileWriteTool()
             result = await w_tool.run(path=tmp, content="hello\nworld\n")
@@ -164,7 +164,7 @@ class TestGlobGrepTool:
 class TestCoverageTool:
     @pytest.fixture
     def store(self):
-        s = CoverageStore(path=os.path.join(os.environ.get("TEMP", "/tmp"), f"aegix_cov_{os.urandom(4).hex()}.json"))
+        s = CoverageStore(path=os.path.join(os.environ.get("TEMP", "/tmp"), f"codeguard_cov_{os.urandom(4).hex()}.json"))
         s.load()
         return s
 

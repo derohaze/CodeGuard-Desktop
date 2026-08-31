@@ -34,8 +34,8 @@ class IntelligenceStore:
     def __init__(self, project_dir: str | None = None, home_dir: str | None = None):
         cwd = project_dir or os.getcwd()
         home = home_dir or os.path.expanduser("~")
-        self._project_path = os.path.join(cwd, ".aegix", "intelligence", "scenarios.jsonl")
-        self._personal_path = os.path.join(home, ".aegix", "intelligence", "scenarios.jsonl")
+        self._project_path = os.path.join(cwd, ".codeguard", "intelligence", "scenarios.jsonl")
+        self._personal_path = os.path.join(home, ".codeguard", "intelligence", "scenarios.jsonl")
 
     def list(self) -> list[IntelligenceScenario]:
         scenarios: list[IntelligenceScenario] = []

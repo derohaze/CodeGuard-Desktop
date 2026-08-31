@@ -62,7 +62,7 @@ export function SuggestFixScreen({ onComplete, onInvalidatedFinding, finding, fi
         applyPlan(plan);
     } catch (error) {
       if (!active) return;
-      console.error("[Aegix] Failed to generate remediation plan", error);
+      console.error("[CodeGuard] Failed to generate remediation plan", error);
       if (error instanceof Error && error.message.toLowerCase().includes("invalidated during remediation preflight")) {
         await onInvalidatedFinding?.();
         return;
@@ -129,9 +129,9 @@ export function SuggestFixScreen({ onComplete, onInvalidatedFinding, finding, fi
 
         return current.map((line, index) =>
           index === current.length - 1
-            ? { ...line, type: "done" }
+            ? { ...line, type: "done" as const }
             : line,
-        ).concat(next);
+        ).concat(next) as TaskLine[];
       });
     }, 3200);
 
@@ -172,7 +172,7 @@ export function SuggestFixScreen({ onComplete, onInvalidatedFinding, finding, fi
       });
       applyPlan(nextPlan);
     } catch (error) {
-      console.error("[Aegix] Failed to regenerate remediation plan", error);
+      console.error("[CodeGuard] Failed to regenerate remediation plan", error);
       if (error instanceof Error && error.message.toLowerCase().includes("invalidated during remediation preflight")) {
         await onInvalidatedFinding?.();
         return;
@@ -414,7 +414,7 @@ function buildGeneratingTimeline({
   mode: "single" | "batch";
   findingCount: number;
   finding?: Finding | null;
-}): TaskLine[] {
+}): Array<TaskLine> {
   const target = finding?.file ?? "the selected finding";
   return [
     {
@@ -426,35 +426,35 @@ function buildGeneratingTimeline({
           : `Explaining the vulnerable execution path in ${target}.`,
       type: "status",
       agent: "explain_agent",
-    },
+    } as TaskLine,
     {
       id: "strategies",
       title: "Drafting strategies",
       text: "Drafting remediation strategies that preserve the existing behavior while removing the sink exposure.",
       type: "status",
       agent: "fix_agent",
-    },
+    } as TaskLine,
     {
       id: "patch-shape",
       title: "Preparing patch structure",
       text: "Preparing a review-ready patch shape and matching the diff to the traced lines.",
       type: "status",
       agent: "fix_agent",
-    },
+    } as TaskLine,
     {
       id: "validate",
       title: "Validating patch structure",
       text: "Validating the patch structure before it is shown for approval.",
       type: "status",
       agent: "validation_agent",
-    },
+    } as TaskLine,
     {
       id: "finalize",
       title: "Finalizing remediation plan",
       text: "Finalizing the remediation plan and rendering the code diff for review.",
       type: "status",
       agent: "fix_agent",
-    },
+    } as TaskLine,
   ];
 }
 

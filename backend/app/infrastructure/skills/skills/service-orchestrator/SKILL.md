@@ -10,7 +10,7 @@ allowed-tools:
 
 # Service orchestrator lifecycle playbook
 
-Use this skill to start, verify, and stop the Aegix local services.
+Use this skill to start, verify, and stop the CodeGuard local services.
 
 | Service | Location | Port |
 |---|---|---|

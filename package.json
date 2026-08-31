@@ -1,5 +1,5 @@
 {
-  "name": "aegix-desktop",
+  "name": "codeguard-desktop",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -17,8 +17,8 @@
     "electron:build:win": "vite build && electron-builder --win"
   },
   "build": {
-    "appId": "com.aegix.desktop",
-    "productName": "Aegix",
+    "appId": "com.codeguard.desktop",
+    "productName": "CodeGuard",
     "directories": {
       "output": "release"
     },
@@ -30,7 +30,7 @@
     "win": {
       "target": ["nsis"],
       "icon": "public/icon.ico",
-      "executableName": "Aegix"
+      "executableName": "CodeGuard"
     },
     "nsis": {
       "installerIcon": "public/icon.ico",

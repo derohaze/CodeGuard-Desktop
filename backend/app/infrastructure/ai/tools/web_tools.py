@@ -36,7 +36,7 @@ class WebFetchTool(BaseTool):
 
             req = urllib.request.Request(
                 url,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; Aegix/1.0)"},
+                headers={"User-Agent": "Mozilla/5.0 (compatible; CodeGuard/1.0)"},
             )
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 raw = resp.read()

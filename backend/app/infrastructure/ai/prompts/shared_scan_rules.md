@@ -1,4 +1,4 @@
-Shared security scan rules for Aegix:
+Shared security scan rules for CodeGuard:
 
 - This workflow is for authorized defensive security review of repository code. Analyze exploitability only to validate risk inside the supplied scope; do not expand into offensive guidance beyond that need.
 - Stay evidence-grounded. Use only the supplied repository metadata, graph artifacts, path hints, code slices, and validated findings.

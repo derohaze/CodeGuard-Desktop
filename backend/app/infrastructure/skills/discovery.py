@@ -12,9 +12,9 @@ def skill_discovery_directories(
     home = home_dir or os.path.expanduser("~")
     dirs: list[str] = [
         os.path.join(cwd, "skills"),
-        os.path.join(cwd, ".aegix", "skills"),
-        os.path.join(home, ".aegix", "builtin-skills"),
-        os.path.join(home, ".aegix", "skills"),
+        os.path.join(cwd, ".codeguard", "skills"),
+        os.path.join(home, ".codeguard", "builtin-skills"),
+        os.path.join(home, ".codeguard", "skills"),
     ]
     if configured_dirs:
         dirs.extend(os.path.abspath(d) for d in configured_dirs)

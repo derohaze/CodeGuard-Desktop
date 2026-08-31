@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Deterministic static detector benchmark for Aegix.
+"""Deterministic static detector benchmark for CodeGuard.
 
 This benchmark intentionally avoids AI providers so false-positive and
 false-negative changes in local detectors are measurable in CI and during
@@ -160,7 +160,7 @@ def run_static_security_benchmark() -> StaticBenchmarkResult:
     false_negatives = 0
     failures: list[dict] = []
 
-    with tempfile.TemporaryDirectory(prefix="aegix-static-bench-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="codeguard-static-bench-") as tmp:
         source_root = Path(tmp)
         for case in STATIC_BENCHMARK_CASES:
             case_path = source_root / case.language / case.filename

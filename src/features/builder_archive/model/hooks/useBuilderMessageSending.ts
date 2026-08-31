@@ -523,7 +523,7 @@ export function useBuilderMessageSending({
             setActiveConversationId(null);
           }
           setDraft(prompt);
-          console.error("[Aegix Builder] Failed to send message", fallbackError ?? error);
+          console.error("[CodeGuard Builder] Failed to send message", fallbackError ?? error);
         }
       } finally {
         if (streamDrainFrameRef.current !== null) {

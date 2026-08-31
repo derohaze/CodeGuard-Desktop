@@ -26,7 +26,7 @@ from app.infrastructure.ai.client_utils import (
 from app.infrastructure.ai.orchestration.model_router import ModelRouter
 from app.infrastructure.ai.prompt_loader import load_prompt_pack
 
-logger = logging.getLogger("aegix.ai")
+logger = logging.getLogger("codeguard.ai")
 
 _RATE_LIMIT_FALLBACK_COOLDOWN_SECONDS = 30.0
 _RATE_LIMIT_MAX_COOLDOWN_SECONDS = 60.0
@@ -1100,7 +1100,7 @@ def _provider_timeout_message(provider_name: str) -> str:
 
 
 def _provider_connection_message(provider_name: str) -> str:
-    return "Aegix could not reach NVIDIA. Check network access and retry."
+    return "CodeGuard could not reach NVIDIA. Check network access and retry."
 
 
 def _provider_runtime_message(provider_name: str) -> str:
