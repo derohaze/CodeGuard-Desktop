@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.core.config import get_settings
+from app.infrastructure.ai.providers.encryption import decrypt_api_key, encrypt_api_key, mask_api_key
 from app.infrastructure.database.collections import RUNTIME_SETTINGS_COLLECTION
 from app.infrastructure.database.mongo import get_database
 
@@ -31,6 +32,15 @@ class RuntimeSettingsRepository:
 
     async def update(self, updates: dict[str, Any]) -> dict[str, Any]:
         current = await self.get()
+        # Handle provider api_key encryption: plain ai_api_key -> encrypted ai_api_key_encrypted
+        if "ai_api_key" in updates:
+            plain = updates.pop("ai_api_key")
+            if plain is not None and str(plain).strip():
+                updates["ai_api_key_encrypted"] = encrypt_api_key(str(plain).strip())
+            elif plain == "":
+                # Clear key if empty string
+                updates["ai_api_key_encrypted"] = ""
+        # Normalize None base_url/model to allow clearing
         next_document = {
             **current,
             **updates,
@@ -67,6 +77,10 @@ class RuntimeSettingsRepository:
             "external_ingestion_max_rps": int(settings.external_ingestion_max_rps),
             "external_ingestion_retry_attempts": int(settings.external_ingestion_retry_attempts),
             "external_ingestion_backoff_seconds": float(settings.external_ingestion_backoff_seconds),
+            "ai_provider": None,
+            "ai_model": None,
+            "ai_base_url": None,
+            "ai_api_key_encrypted": "",
             "created_at": now,
             "updated_at": now,
         }

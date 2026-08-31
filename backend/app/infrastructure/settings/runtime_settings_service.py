@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from app.application.dto.runtime_settings_contracts import RuntimeSettingsResponse
+from app.infrastructure.ai.providers.encryption import decrypt_api_key, mask_api_key
 from app.infrastructure.settings.runtime_settings_repository import RuntimeSettingsRepository
 
 
@@ -54,6 +55,10 @@ class RuntimeSettingsService:
 
     @staticmethod
     def _parse_document(document: dict[str, Any]) -> RuntimeSettingsResponse:
+        encrypted = str(document.get("ai_api_key_encrypted") or "")
+        plain = decrypt_api_key(encrypted) if encrypted else ""
+        masked = mask_api_key(plain) if plain else None
+        has_key = bool(plain)
         return RuntimeSettingsResponse(
             default_preset=str(document.get("default_preset", "balanced")),
             default_scan_mode=str(document.get("default_scan_mode", "deep")),
@@ -67,5 +72,10 @@ class RuntimeSettingsService:
             external_ingestion_max_rps=int(document.get("external_ingestion_max_rps", 10)),
             external_ingestion_retry_attempts=int(document.get("external_ingestion_retry_attempts", 3)),
             external_ingestion_backoff_seconds=float(document.get("external_ingestion_backoff_seconds", 0.5)),
+            ai_provider=document.get("ai_provider"),
+            ai_model=document.get("ai_model"),
+            ai_base_url=document.get("ai_base_url"),
+            ai_api_key_masked=masked,
+            ai_has_key=has_key,
             updated_at=document["updated_at"],
         )

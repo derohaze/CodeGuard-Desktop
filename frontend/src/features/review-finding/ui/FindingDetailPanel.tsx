@@ -214,7 +214,6 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
             <TabsTrigger value="decision" className="rounded-xl px-4 py-2 text-sm">Decision</TabsTrigger>
             <TabsTrigger value="flow" className="rounded-xl px-4 py-2 text-sm">Data flow</TabsTrigger>
             <TabsTrigger value="explanation" className="rounded-xl px-4 py-2 text-sm">Explanation</TabsTrigger>
-            <TabsTrigger value="fix" className="rounded-xl px-4 py-2 text-sm">Fix</TabsTrigger>
           </TabsList>
 
           <TabsContent value="summary" className="mt-0">
@@ -317,63 +316,9 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
             </div>
           </TabsContent>
 
-          <TabsContent value="fix" className="mt-0">
-            <div className="space-y-4">
-              <Panel>
-                <p className="mb-4 text-sm leading-7 text-txt-secondary">
-                  Generate a code-aware remediation plan from the real path and evidence to review concrete fix strategies and an actual patch diff.
-                </p>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <FixModeCard icon={Gauge} title="Refactor patch" description="Generate a structural fix tied to the traced source-to-sink path." />
-                  <FixModeCard icon={ShieldCheck} title="Guard patch" description="Add validation or trust-boundary checks before the risky execution step." />
-                  <FixModeCard icon={Zap} title="Sanitization patch" description="Apply the smallest effective sanitization or parameterization fix for this flow." />
-                </div>
-              </Panel>
-
-              <Panel>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-txt-primary">Audit log</p>
-                  <span className="text-xs text-txt-tertiary">Real analysis trace</span>
-                </div>
-                <div className="space-y-2.5">
-                  {finding.auditLog.map((entry, index) => (
-                    <div key={entry} className="flex gap-3 text-sm text-txt-secondary">
-                      <span className="text-txt-tertiary">{String(index + 1).padStart(2, "0")}</span>
-                      <span>{entry}</span>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-
-              <Panel>
-                <p className="mb-4 text-sm leading-7 text-txt-secondary">
-                  Evidence captured from the real analysis result.
-                </p>
-                <CodeBlock
-                  code={finding.evidence || "// No code evidence was returned for this finding."}
-                  annotations={[
-                    {
-                      lineStart: finding.line,
-                      lineEnd: finding.lineEnd,
-                      tone: finding.severity === "critical" || finding.severity === "high" ? "red" : "yellow",
-                    },
-                  ]}
-                />
-              </Panel>
-            </div>
-          </TabsContent>
         </Tabs>
 
         <div className="mt-8 flex items-center justify-end gap-3 border-t pt-4" style={{ borderColor: "hsl(var(--border-primary))" }}>
-          <motion.button
-            whileTap={{ scale: 0.985 }}
-            onClick={onOpenDecisionCenter}
-            disabled={loading}
-            className="rounded-xl border bg-card px-5 py-2 text-sm font-medium text-txt-primary disabled:opacity-50"
-            style={{ borderColor: "hsl(var(--border-primary))" }}
-          >
-            Decision center
-          </motion.button>
           <motion.button
             whileTap={{ scale: 0.985 }}
             onClick={onDismiss}
@@ -382,15 +327,6 @@ export function FindingDetailPanel({ finding, sessionId, onDismiss, onOpenDecisi
             style={{ borderColor: "hsl(var(--border-primary))" }}
           >
             Dismiss
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.985 }}
-            onClick={handleSuggestFix}
-            disabled={loading}
-            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-80"
-          >
-            {loading && <Loader variant="spin" className="size-4 text-primary-foreground" />}
-            {loading ? "Loading..." : "Suggest fix"}
           </motion.button>
         </div>
       </div>

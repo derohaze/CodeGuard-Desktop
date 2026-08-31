@@ -2,7 +2,7 @@ from app.application.dto.remediation_contracts import ExplainFindingRequest, Exp
 from app.application.use_cases.remediation.remediation_mapper import map_explanation
 from app.domain.entities.remediation import ExplanationEntity
 from app.domain.repositories.scan_repository import ScanSessionRepository
-from app.infrastructure.ai.orchestration.remediation_router import RemediationRouter
+from app.domain.services.ai_client import SecurityAnalysisAIClient
 from app.infrastructure.services.remediation.remediation_context import build_remediation_context, locate_finding
 from app.infrastructure.services.workflow.workflow_persistence import WorkflowPersistenceService
 
@@ -11,11 +11,11 @@ class ExplainFindingUseCase:
     def __init__(
         self,
         repository: ScanSessionRepository,
-        agent_router: RemediationRouter,
+        ai_client: SecurityAnalysisAIClient,
         workflow_persistence: WorkflowPersistenceService | None = None,
     ) -> None:
         self.repository = repository
-        self.agent_router = agent_router
+        self.ai_client = ai_client
         self.workflow_persistence = workflow_persistence
 
     async def execute(self, payload: ExplainFindingRequest) -> ExplanationResponse | None:
@@ -28,8 +28,8 @@ class ExplainFindingUseCase:
             return None
 
         context = build_remediation_context(session, finding)
-        await self.agent_router.start_run(context, "single")
-        explanation = await self.agent_router.explain(context, mode="single")
+        # Direct AI call — no router, lightweight code-review only
+        explanation = await self.ai_client.explain_finding(context)
         entity = ExplanationEntity(
             finding_id=finding.id,
             summary=str(explanation.get("summary") or finding.summary),

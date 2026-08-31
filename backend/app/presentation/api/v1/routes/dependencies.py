@@ -2,12 +2,8 @@ from functools import lru_cache
 
 from app.application.use_cases.session.delete_all_sessions import DeleteAllSessionsUseCase
 from app.application.use_cases.session.delete_session import DeleteSessionUseCase
-from app.application.use_cases.remediation.apply_fix import ApplyFixUseCase
 from app.application.use_cases.learning.archive_learning_session import ArchiveLearningSessionUseCase
-from app.application.use_cases.remediation.rollback_fix import RollbackFixUseCase
 from app.application.use_cases.remediation.explain_finding import ExplainFindingUseCase
-from app.application.use_cases.remediation.generate_batch_remediation import GenerateBatchRemediationUseCase
-from app.application.use_cases.remediation.generate_fix import GenerateFixUseCase
 from app.application.use_cases.learning.ingest_external_knowledge import IngestExternalKnowledgeUseCase
 from app.application.use_cases.scan.get_scan_job import GetScanJobUseCase
 from app.application.use_cases.session.get_session import GetSessionUseCase
@@ -19,9 +15,7 @@ from app.application.use_cases.workflow.get_workflow_service_exposure_summary im
 from app.application.use_cases.workflow.get_workflow_team_posture_feed import GetWorkflowTeamPostureFeedUseCase
 from app.application.use_cases.workflow.get_workflow_team_posture_summary import GetWorkflowTeamPostureSummaryUseCase
 from app.application.use_cases.session.list_sessions import ListSessionsUseCase
-from app.application.use_cases.remediation.reject_fix import RejectFixUseCase
 from app.application.use_cases.learning.record_feedback_event import RecordFeedbackEventUseCase
-from app.application.use_cases.remediation.retry_fix_strategy import RetryFixStrategyUseCase
 from app.application.use_cases.learning.run_learning_benchmarks import RunLearningBenchmarksUseCase
 from app.application.use_cases.learning.search_external_knowledge import SearchExternalKnowledgeUseCase
 from app.application.use_cases.scan.start_scan import StartScanUseCase
@@ -29,14 +23,11 @@ from app.application.use_cases.settings.update_runtime_settings import UpdateRun
 from app.application.ports.scan_job_dispatcher import ScanJobDispatcher
 from app.core.config import get_settings
 from app.infrastructure.ai.agents.explain_agent import ExplainAgent
-from app.infrastructure.ai.agents.fix_agent import FixAgent
-from app.infrastructure.ai.agents.validation_agent import ValidationAgent
 from app.domain.repositories.audit_event_repository import AuditEventRepository
 from app.domain.repositories.scan_job_repository import ScanJobRepository
 from app.domain.repositories.verification_run_repository import VerificationRunRepository
 from app.domain.services.ai_client import SecurityAnalysisAIClient
 from app.infrastructure.ai.provider_factory import build_ai_client
-from app.infrastructure.ai.orchestration.remediation_router import RemediationRouter
 from app.infrastructure.queue.scan_job_dispatcher import ArqScanJobDispatcher, InProcessScanJobDispatcher
 from app.infrastructure.repositories.mongo_audit_event_repository import MongoAuditEventRepository
 from app.infrastructure.repositories.mongo_scan_job_repository import MongoScanJobRepository
@@ -155,17 +146,6 @@ def get_scan_job_dispatcher() -> ScanJobDispatcher:
     return InProcessScanJobDispatcher(get_scan_execution_service())
 
 
-@lru_cache
-def get_remediation_router() -> RemediationRouter:
-    ai_client = get_ai_client()
-    return RemediationRouter(
-        explain_agent=ExplainAgent(ai_client),
-        fix_agent=FixAgent(ai_client),
-        validation_agent=ValidationAgent(ai_client),
-        model_router=ai_client.model_router,
-    )
-
-
 def get_start_scan_use_case() -> StartScanUseCase:
     return StartScanUseCase(
         get_repository(),
@@ -230,36 +210,9 @@ def get_delete_all_sessions_use_case() -> DeleteAllSessionsUseCase:
 
 
 def get_explain_finding_use_case() -> ExplainFindingUseCase:
-    return ExplainFindingUseCase(get_repository(), get_remediation_router(), get_workflow_persistence_service())
+    return ExplainFindingUseCase(get_repository(), get_ai_client(), get_workflow_persistence_service())
 
 
-def get_generate_fix_use_case() -> GenerateFixUseCase:
-    return GenerateFixUseCase(
-        get_repository(),
-        get_remediation_router(),
-        get_workflow_persistence_service(),
-        get_runtime_settings_service(),
-    )
-
-
-def get_generate_batch_remediation_use_case() -> GenerateBatchRemediationUseCase:
-    return GenerateBatchRemediationUseCase(get_repository(), get_remediation_router(), get_workflow_persistence_service())
-
-
-def get_apply_fix_use_case() -> ApplyFixUseCase:
-    return ApplyFixUseCase(get_repository(), get_workflow_persistence_service())
-
-
-def get_reject_fix_use_case() -> RejectFixUseCase:
-    return RejectFixUseCase(get_repository(), get_workflow_persistence_service())
-
-
-def get_retry_fix_strategy_use_case() -> RetryFixStrategyUseCase:
-    return RetryFixStrategyUseCase(get_repository(), get_remediation_router(), get_workflow_persistence_service())
-
-
-def get_rollback_fix_use_case() -> RollbackFixUseCase:
-    return RollbackFixUseCase(get_repository(), get_workflow_persistence_service())
 
 
 def get_archive_learning_session_use_case() -> ArchiveLearningSessionUseCase:

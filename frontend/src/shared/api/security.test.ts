@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { generateFix, getRepoHotspots, getTeamPostureSummary } from "./security";
+import { explainFinding, getRepoHotspots, getTeamPostureSummary } from "./security";
 
 describe("security API error handling", () => {
   afterEach(() => {
@@ -18,7 +18,7 @@ describe("security API error handling", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(
-      generateFix({
+      explainFinding({
         sessionId: "session-1",
         findingId: "finding-1",
       }),
@@ -37,7 +37,7 @@ describe("security API error handling", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(
-      generateFix({
+      explainFinding({
         sessionId: "session-1",
         findingId: "finding-1",
       }),

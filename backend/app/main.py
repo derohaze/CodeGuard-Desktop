@@ -18,6 +18,7 @@ from app.presentation.api.v1.routes import (
     coverage,
     health,
     learning,
+    providers,
     remediation,
     scans,
     sessions,
@@ -90,6 +91,7 @@ app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(scans.router, prefix="/api/v1", tags=["scans"])
 app.include_router(sessions.router, prefix="/api/v1", tags=["sessions"])
 app.include_router(remediation.router, prefix="/api/v1", tags=["remediation"])
+app.include_router(providers.router, prefix="/api/v1", tags=["providers"])
 app.include_router(learning.router, prefix="/api/v1", tags=["learning"])
 app.include_router(settings_routes.router, prefix="/api/v1", tags=["settings"])
 app.include_router(skills.router, prefix="/api/v1", tags=["skills"])

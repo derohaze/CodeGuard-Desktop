@@ -13,7 +13,6 @@ from app.domain.repositories.scan_job_repository import ScanJobRepository
 from app.domain.repositories.scan_repository import ScanSessionRepository
 from app.domain.services.ai_client import SecurityAnalysisAIClient
 from app.infrastructure.ai.agents.detection_agent import DetectionAgent
-from app.infrastructure.ai.agents.penetration_tester import PenetrationTestAgent
 from app.infrastructure.services.workflow.workflow_persistence import WorkflowPersistenceService
 from app.infrastructure.services.scan.coverage_calculation import build_progress_state, calculate_progress_metrics
 from app.infrastructure.services.scan.duplicate_clustering import cluster_findings
@@ -52,7 +51,6 @@ from app.infrastructure.services.scan.scan_modes import ScanModeConfig, get_scan
 from app.infrastructure.services.scan.segmentation_planning import build_scan_work_units
 from app.infrastructure.services.scan.risk_prioritization import prioritize_review_queue
 from app.infrastructure.services.repository.source_sink_registry import build_source_sink_registry
-from app.infrastructure.services.scan.penetration_sandbox import prepare_penetration_sandbox
 
 logger = logging.getLogger("codeguard.scan")
 
@@ -811,120 +809,8 @@ class ScanExecutionService:
                 else:
                     logs.append(validated["review_note"])
 
-            penetration_report: dict | None = None
-            penetration_sandbox: dict | None = None
-            if merged_validated_findings:
-                try:
-                    penetration_sandbox = prepare_penetration_sandbox(
-                        session_id=session.id,
-                        source_path=source,
-                        source_root=source_root,
-                        target_type=session.target_type,
-                        findings=merged_validated_findings,
-                    )
-                    if penetration_sandbox.get("enabled"):
-                        logs.append(
-                            "Prepared isolated penetration sandbox "
-                            f"({int(penetration_sandbox.get('copied_files', 0))} files)."
-                        )
-                    else:
-                        logs.append("Penetration sandbox is disabled; using metadata-only penetration context.")
-                except Exception as exc:  # pragma: no cover - defensive runtime safety
-                    logger.exception("Failed to prepare penetration sandbox; continuing with metadata-only context", exc_info=exc)
-                    penetration_sandbox = {
-                        "enabled": False,
-                        "mode": "metadata_only",
-                        "workspace_root": "",
-                        "manifest_path": "",
-                        "copied_files": 0,
-                        "skipped_files": 0,
-                        "truncated": False,
-                    }
-                    logs.append("Penetration sandbox preparation failed; using metadata-only penetration context.")
-
-                penetration_context = {
-                    "interactive": getattr(session, "interactive", False),
-                    "session_id": session_id,
-                    "project_name": session.repo,
-                    "source_path": session.source_path,
-                    "preset": session.preset,
-                    "scan_mode": session.scan_mode,
-                    "repository_profile": profile,
-                    "repository_map": {
-                        **repository_map,
-                        "framework_profile": framework_profile,
-                        "repository_graph_summary": repository_graph["summary"],
-                        "path_summary": traced_paths["summary"],
-                    },
-                    "findings": merged_validated_findings,
-                    "candidate_findings": candidate_findings,
-                    "sandbox": penetration_sandbox,
-                }
-
-                await self._update_with_logs(
-                    session_id,
-                    logs,
-                    "Running controlled penetration simulation",
-                    "Executing deterministic exploit validation steps to strengthen remediation context.",
-                    lock_lease=lock_lease,
-                    job_id=job_id,
-                    job_stage="penetration",
-                    scan_mode=session.scan_mode,
-                    current_phase="Penetration testing",
-                    started_at=started_at,
-                    progress_counters={
-                        "penetration_artifacts_ready": 0,
-                        "penetration_artifacts_total": 1,
-                        "candidates_validated": max(1, len(candidate_findings)),
-                        "candidates_total": max(1, len(candidate_findings)),
-                    },
-                )
-                penetration_agent = PenetrationTestAgent(self.ai_client)
-                try:
-                    penetration_report = await penetration_agent.run(penetration_context)
-                    self._append_runtime_events(logs)
-                    if penetration_report.get("review_note"):
-                        logs.append(str(penetration_report["review_note"]))
-                    logs.extend(build_penetration_log_lines(penetration_report))
-                    merged_validated_findings = enrich_findings_with_penetration_overrides(
-                        merged_validated_findings,
-                        penetration_report,
-                    )
-                except ExternalAIServiceError as exc:
-                    logger.warning("Penetration simulation failed; switching to deterministic penetration benchmark", exc_info=exc)
-                    penetration_report = build_penetration_fallback_report(
-                        merged_validated_findings,
-                        reason=f"AI provider fallback ({exc.provider}/{exc.failure_kind})",
-                    )
-                    logs.append("Penetration simulation degraded to deterministic benchmark due to AI provider instability.")
-                    logs.extend(build_penetration_log_lines(penetration_report))
-                except Exception as exc:  # pragma: no cover - defensive runtime safety
-                    logger.exception("Penetration simulation crashed; switching to deterministic penetration benchmark", exc_info=exc)
-                    penetration_report = build_penetration_fallback_report(
-                        merged_validated_findings,
-                        reason="Runtime fallback (unexpected penetration stage error)",
-                    )
-                    logs.append("Penetration simulation stage failed; generated deterministic benchmark fallback.")
-                    logs.extend(build_penetration_log_lines(penetration_report))
-
-                await self._update_with_logs(
-                    session_id,
-                    logs,
-                    "Running controlled penetration simulation",
-                    "Executing deterministic exploit validation steps to strengthen remediation context.",
-                    lock_lease=lock_lease,
-                    job_id=job_id,
-                    job_stage="penetration",
-                    scan_mode=session.scan_mode,
-                    current_phase="Penetration testing",
-                    started_at=started_at,
-                    progress_counters={
-                        "penetration_artifacts_ready": 1,
-                        "penetration_artifacts_total": 1,
-                        "candidates_validated": max(1, len(candidate_findings)),
-                        "candidates_total": max(1, len(candidate_findings)),
-                    },
-                )
+            penetration_report = None
+            penetration_sandbox = None
 
             findings = dict_findings_to_entities(merged_validated_findings)
             candidate_entities = dict_findings_to_entities(candidate_review_findings)

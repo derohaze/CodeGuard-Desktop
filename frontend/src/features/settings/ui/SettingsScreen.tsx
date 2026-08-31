@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
   ArrowLeft01Icon,
@@ -10,7 +11,10 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "@/components/ui/sonner";
 import type { RuntimeSettings, UpdateRuntimeSettingsPayload } from "@/shared/api/security";
+import { listProviders, listProviderModels, testProvider } from "@/shared/api/security";
+import type { ProviderInfo } from "@/shared/api/security";
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -20,7 +24,12 @@ interface SettingsScreenProps {
   isSidebarCollapsed?: boolean;
 }
 
-const sections = [{ id: "general", label: "General", icon: Settings01Icon }];
+type SettingsTab = "general" | "providers";
+
+const sections: Array<{ id: SettingsTab; label: string; icon: typeof Settings01Icon }> = [
+  { id: "general", label: "General", icon: Settings01Icon },
+  { id: "providers", label: "Providers", icon: Settings01Icon },
+];
 
 const scanModes = [
   { value: "deep", label: "Deep analysis" },
@@ -55,6 +64,8 @@ const ingestionRpsOptions = [2, 5, 10, 15, 20, 30];
 const ingestionRetryOptions = [1, 2, 3, 4, 5, 6];
 
 export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, isSidebarCollapsed = false }: SettingsScreenProps) {
+  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+
   return (
     <div key="settings-screen" className="flex min-h-0 flex-1 overflow-hidden bg-[#171717]">
       {/* Left nav — collapsible like workspace sidebar, Codex warm dark */}
@@ -63,7 +74,7 @@ export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, is
         style={{ width: isSidebarCollapsed ? 0 : 240 }}
         aria-hidden={isSidebarCollapsed}
       >
-        <motion.aside
+        <motion.div
           className="absolute inset-y-0 left-0 flex w-[240px] min-h-0 flex-col overflow-hidden bg-[#171717]"
           initial={false}
           animate={{ x: isSidebarCollapsed ? -240 : 0, opacity: isSidebarCollapsed ? 0 : 1 }}
@@ -81,21 +92,25 @@ export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, is
 
           <div className="space-y-0.5 px-2 py-3">
             {sections.map((section) => {
+              const active = activeTab === section.id;
               return (
                 <button
                   key={section.id}
-                  className="flex w-full items-center gap-2 rounded-lg bg-white/[0.08] px-2.5 py-1.5 text-left text-[12.5px] font-medium text-white"
+                  onClick={() => setActiveTab(section.id)}
+                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[12.5px] font-medium transition-colors ${
+                    active ? "bg-white/[0.08] text-white" : "text-white/60 hover:bg-white/[0.04] hover:text-white/85"
+                  }`}
                 >
-                  <HugeiconsIcon icon={section.icon} size={14} strokeWidth={1.7} color="currentColor" className="text-white/70" />
+                  <HugeiconsIcon icon={section.icon} size={14} strokeWidth={1.7} color="currentColor" className={active ? "text-white/70" : "text-white/40"} />
                   <span>{section.label}</span>
                 </button>
               );
             })}
           </div>
-        </motion.aside>
+        </motion.div>
       </div>
 
-      {/* Right content — Codex #121212 / card #1e1e1e with page curve like external app (outer page curve) */}
+      {/* Right content — Codex #121212 / card #1e1e1e with page curve like external app */}
       <div
         className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-[#171717] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
           isSidebarCollapsed ? "rounded-t-[16px]" : "rounded-tl-[16px]"
@@ -103,182 +118,444 @@ export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, is
       >
         <div className="hide-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#121212]">
           <div className="mx-auto flex w-full max-w-[860px] flex-col gap-5 px-8 py-7">
-          <div className="flex items-center justify-between gap-6">
-            <div>
-              <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-white">General</h2>
-              {isSaving ? <p className="mt-1 text-[11px] text-white/40">Saving settings…</p> : null}
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-[16px] border border-white/[0.06] bg-[#1e1e1e]">
-            {/* Analyst preset — Codex card style */}
-            <div className="border-b border-white/[0.06] px-4 py-4">
-              <div className="mb-3">
-                <p className="text-[13px] font-medium text-white">Analyst preset</p>
-                <p className="mt-1 text-[12.5px] leading-5 text-white/55">Choose the default posture for new analysis sessions.</p>
-              </div>
-
-              <div className="grid gap-2.5 md:grid-cols-3">
-                {scanPresets.map((preset) => {
-                  const active = settings.defaultPreset === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      onClick={() => {
-                        void onPatchSettings({
-                          defaultPreset: preset.id,
-                          defaultScanMode: preset.defaultMode,
-                        });
-                      }}
-                      className={`group rounded-xl border px-3.5 py-3.5 text-left transition-all ${
-                        active
-                          ? "bg-[#2a241e] border-[#c9a86a]/25 shadow-[0_0_0_1px_rgba(201,168,106,0.12)]"
-                          : "bg-[#232323] border-white/[0.06] hover:bg-[#262626] hover:border-white/[0.08]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 text-white">
-                        <div
-                          className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-                            active ? "bg-white/[0.08] text-white" : "bg-white/[0.06] text-white/70"
-                          }`}
-                        >
-                          <HugeiconsIcon icon={preset.icon} size={13} strokeWidth={1.7} color="currentColor" />
-                        </div>
-                        <span className="text-[12.5px] font-medium">{preset.label}</span>
-                      </div>
-                      <p className="mt-2.5 text-[12px] leading-5 text-white/55">{preset.description}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <SettingsRow
-              title="Default analysis mode"
-              description="Set how new security analysis sessions start."
-              control={
-                <Select
-                  value={settings.defaultScanMode}
-                  onValueChange={(value) => void onPatchSettings({ defaultScanMode: value as RuntimeSettings["defaultScanMode"] })}
-                >
-                  <SelectTrigger className={selectClassName}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className={selectContentClassName}>
-                    {scanModes.map((mode) => (
-                      <SelectItem key={mode.value} value={mode.value} className={selectItemClassName}>
-                        {mode.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              }
-            />
-
-            <SettingsRow
-              title="Auto-open results"
-              description="Open findings automatically after analysis completion."
-              control={
-                <Switch
-                  checked={settings.autoOpenResults}
-                  onCheckedChange={(checked) => void onPatchSettings({ autoOpenResults: checked })}
-                />
-              }
-            />
-
-            <SettingsRow
-              title="Sidebar behavior"
-              description="Remember the last open or collapsed state."
-              control={
-                <Switch
-                  checked={settings.rememberSidebarState}
-                  onCheckedChange={(checked) => void onPatchSettings({ rememberSidebarState: checked })}
-                />
-              }
-            />
-
-            <SettingsRow
-              title="Remediation retries"
-              description="Maximum tuning attempts per remediation run."
-              control={
-                <Select
-                  value={String(settings.remediationMaxAttempts)}
-                  onValueChange={(value) => void onPatchSettings({ remediationMaxAttempts: Number(value) })}
-                >
-                  <SelectTrigger className={selectClassName}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className={selectContentClassName}>
-                    {remediationAttemptOptions.map((value) => (
-                      <SelectItem key={value} value={String(value)} className={selectItemClassName}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              }
-            />
-
-            <SettingsRow
-              title="Reuse explanation on retry"
-              description="Reduce provider requests by reusing the first explanation across retries."
-              control={
-                <Switch
-                  checked={settings.remediationReuseExplanation}
-                  onCheckedChange={(checked) => void onPatchSettings({ remediationReuseExplanation: checked })}
-                />
-              }
-            />
-
-            <SettingsRow
-              title="External ingestion max RPS"
-              description="Rate limit for external security knowledge fetch runs."
-              control={
-                <Select
-                  value={String(settings.externalIngestionMaxRps)}
-                  onValueChange={(value) => void onPatchSettings({ externalIngestionMaxRps: Number(value) })}
-                >
-                  <SelectTrigger className={selectClassName}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className={selectContentClassName}>
-                    {ingestionRpsOptions.map((value) => (
-                      <SelectItem key={value} value={String(value)} className={selectItemClassName}>
-                        {value} req/s
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              }
-            />
-
-            <SettingsRow
-              title="External ingestion retries"
-              description="Retry attempts for transient external source failures."
-              control={
-                <Select
-                  value={String(settings.externalIngestionRetryAttempts)}
-                  onValueChange={(value) => void onPatchSettings({ externalIngestionRetryAttempts: Number(value) })}
-                >
-                  <SelectTrigger className={selectClassName}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className={selectContentClassName}>
-                    {ingestionRetryOptions.map((value) => (
-                      <SelectItem key={value} value={String(value)} className={selectItemClassName}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              }
-              border={false}
-            />
+            {activeTab === "general" ? (
+              <GeneralTab settings={settings} onPatchSettings={onPatchSettings} isSaving={isSaving} />
+            ) : (
+              <ProvidersTab settings={settings} onPatchSettings={onPatchSettings} />
+            )}
           </div>
         </div>
       </div>
-      </div>
     </div>
+  );
+}
+
+function GeneralTab({ settings, onPatchSettings, isSaving }: { settings: RuntimeSettings; onPatchSettings: SettingsScreenProps["onPatchSettings"]; isSaving: boolean }) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-6">
+        <div>
+          <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-white">General</h2>
+          {isSaving ? <p className="mt-1 text-[11px] text-white/40">Saving settings…</p> : null}
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-[16px] border border-white/[0.06] bg-[#1e1e1e]">
+        <div className="border-b border-white/[0.06] px-4 py-4">
+          <div className="mb-3">
+            <p className="text-[13px] font-medium text-white">Analyst preset</p>
+            <p className="mt-1 text-[12.5px] leading-5 text-white/55">Choose the default posture for new analysis sessions.</p>
+          </div>
+
+          <div className="grid gap-2.5 md:grid-cols-3">
+            {scanPresets.map((preset) => {
+              const active = settings.defaultPreset === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => {
+                    void onPatchSettings({
+                      defaultPreset: preset.id,
+                      defaultScanMode: preset.defaultMode,
+                    });
+                  }}
+                  className={`group rounded-xl border px-3.5 py-3.5 text-left transition-all ${
+                    active
+                      ? "bg-[#2a241e] border-[#c9a86a]/25 shadow-[0_0_0_1px_rgba(201,168,106,0.12)]"
+                      : "bg-[#232323] border-white/[0.06] hover:bg-[#262626] hover:border-white/[0.08]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 text-white">
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${active ? "bg-white/[0.08] text-white" : "bg-white/[0.06] text-white/70"}`}>
+                      <HugeiconsIcon icon={preset.icon} size={13} strokeWidth={1.7} color="currentColor" />
+                    </div>
+                    <span className="text-[12.5px] font-medium">{preset.label}</span>
+                  </div>
+                  <p className="mt-2.5 text-[12px] leading-5 text-white/55">{preset.description}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <SettingsRow
+          title="Default analysis mode"
+          description="Set how new security analysis sessions start."
+          control={
+            <Select
+              value={settings.defaultScanMode}
+              onValueChange={(value) => void onPatchSettings({ defaultScanMode: value as RuntimeSettings["defaultScanMode"] })}
+            >
+              <SelectTrigger className={selectClassName}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className={selectContentClassName}>
+                {scanModes.map((mode) => (
+                  <SelectItem key={mode.value} value={mode.value} className={selectItemClassName}>
+                    {mode.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+
+        <SettingsRow
+          title="Auto-open results"
+          description="Open findings automatically after analysis completion."
+          control={<Switch checked={settings.autoOpenResults} onCheckedChange={(checked) => void onPatchSettings({ autoOpenResults: checked })} />}
+        />
+
+        <SettingsRow
+          title="Sidebar behavior"
+          description="Remember the last open or collapsed state."
+          control={<Switch checked={settings.rememberSidebarState} onCheckedChange={(checked) => void onPatchSettings({ rememberSidebarState: checked })} />}
+        />
+
+        <SettingsRow
+          title="Remediation retries"
+          description="Maximum tuning attempts per remediation run."
+          control={
+            <Select value={String(settings.remediationMaxAttempts)} onValueChange={(value) => void onPatchSettings({ remediationMaxAttempts: Number(value) })}>
+              <SelectTrigger className={selectClassName}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className={selectContentClassName}>
+                {remediationAttemptOptions.map((value) => (
+                  <SelectItem key={value} value={String(value)} className={selectItemClassName}>
+                    {value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+
+        <SettingsRow
+          title="Reuse explanation on retry"
+          description="Reduce provider requests by reusing the first explanation across retries."
+          control={<Switch checked={settings.remediationReuseExplanation} onCheckedChange={(checked) => void onPatchSettings({ remediationReuseExplanation: checked })} />}
+        />
+
+        <SettingsRow
+          title="External ingestion max RPS"
+          description="Rate limit for external security knowledge fetch runs."
+          control={
+            <Select value={String(settings.externalIngestionMaxRps)} onValueChange={(value) => void onPatchSettings({ externalIngestionMaxRps: Number(value) })}>
+              <SelectTrigger className={selectClassName}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className={selectContentClassName}>
+                {ingestionRpsOptions.map((value) => (
+                  <SelectItem key={value} value={String(value)} className={selectItemClassName}>
+                    {value} req/s
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+
+        <SettingsRow
+          title="External ingestion retries"
+          description="Retry attempts for transient external source failures."
+          control={
+            <Select value={String(settings.externalIngestionRetryAttempts)} onValueChange={(value) => void onPatchSettings({ externalIngestionRetryAttempts: Number(value) })}>
+              <SelectTrigger className={selectClassName}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className={selectContentClassName}>
+                {ingestionRetryOptions.map((value) => (
+                  <SelectItem key={value} value={String(value)} className={selectItemClassName}>
+                    {value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+          border={false}
+        />
+      </div>
+    </>
+  );
+}
+
+const FALLBACK_PROVIDERS: ProviderInfo[] = [
+  { id: "openai", name: "OpenAI", defaultBaseUrl: "https://api.openai.com/v1", docsUrl: "https://platform.openai.com/docs" },
+  { id: "anthropic", name: "Anthropic", defaultBaseUrl: "https://api.anthropic.com/v1", docsUrl: "https://docs.anthropic.com" },
+  { id: "deepseek", name: "DeepSeek", defaultBaseUrl: "https://api.deepseek.com/v1", docsUrl: "https://api-docs.deepseek.com" },
+  { id: "gemini", name: "Gemini", defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta", docsUrl: "https://ai.google.dev" },
+  { id: "grok", name: "Grok (xAI)", defaultBaseUrl: "https://api.x.ai/v1", docsUrl: "https://docs.x.ai" },
+  { id: "nvidia", name: "NVIDIA", defaultBaseUrl: "https://integrate.api.nvidia.com/v1", docsUrl: "https://docs.api.nvidia.com" },
+  { id: "custom", name: "Custom", defaultBaseUrl: null, docsUrl: null },
+];
+
+function ProvidersTab({ settings, onPatchSettings }: { settings: RuntimeSettings; onPatchSettings: SettingsScreenProps["onPatchSettings"] }) {
+  const [providers, setProviders] = useState<ProviderInfo[]>(FALLBACK_PROVIDERS);
+  const [selected, setSelected] = useState<string>(settings.aiProvider || "openai");
+  const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState(settings.aiBaseUrl || "");
+  const [customName, setCustomName] = useState("");
+  const [model, setModel] = useState(settings.aiModel || "");
+  const [models, setModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [testState, setTestState] = useState<{ ok: boolean | null; message: string; loading: boolean }>({ ok: null, message: "", loading: false });
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  useEffect(() => {
+    void listProviders()
+      .then((list) => {
+        if (list.length > 0) setProviders(list);
+      })
+      .catch(() => {
+        // keep fallback — no fake data, just static list, live test still goes to real provider
+      });
+  }, []);
+
+  useEffect(() => {
+    // Sync with stored settings when provider changes or settings load
+    if (settings.aiProvider) setSelected(settings.aiProvider);
+    if (settings.aiModel) setModel(settings.aiModel);
+    if (settings.aiBaseUrl) setBaseUrl(settings.aiBaseUrl);
+  }, [settings.aiProvider, settings.aiModel, settings.aiBaseUrl]);
+
+  const currentProvider = providers.find((p) => p.id === selected);
+  const isCustom = selected === "custom";
+
+  const handleTest = async () => {
+    if (!apiKey.trim() && !settings.aiHasKey) {
+      toast.error("Please enter an API key first");
+      return;
+    }
+    const keyToTest = apiKey.trim() || "__stored__"; // Use stored key indicator — backend will use decrypted stored key if apiKey is empty? For now require explicit
+    if (keyToTest === "__stored__") {
+      toast.error("Please re-enter your API key to test");
+      return;
+    }
+    setTestState({ ok: null, message: "", loading: true });
+    setModels([]);
+    try {
+      const result = await testProvider({ provider: selected, apiKey: keyToTest, baseUrl: baseUrl || undefined, model: model || undefined });
+      setTestState({ ok: result.ok, message: result.message, loading: false });
+      if (result.ok) {
+        toast.success(result.message);
+        // Auto-fetch models on success
+        try {
+          const fetched = await listProviderModels({ provider: selected, apiKey: keyToTest, baseUrl: baseUrl || undefined });
+          setModels(fetched);
+          if (fetched.length > 0) toast.success(`Found ${fetched.length} models`);
+        } catch {
+          // ignore
+        }
+      } else {
+        toast.error(result.message);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Test failed";
+      setTestState({ ok: false, message: msg, loading: false });
+      toast.error(msg);
+    }
+  };
+
+  const handleFetchModels = async () => {
+    if (!apiKey.trim()) {
+      toast.error("Please enter an API key first");
+      return;
+    }
+    setTestState({ ok: null, message: "", loading: true });
+    try {
+      const fetched = await listProviderModels({ provider: selected, apiKey: apiKey.trim(), baseUrl: baseUrl || undefined });
+      setModels(fetched);
+      setTestState({ ok: true, message: `Found ${fetched.length} models`, loading: false });
+      toast.success(`Found ${fetched.length} models`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to list models";
+      setTestState({ ok: false, message: msg, loading: false });
+      toast.error(msg);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!apiKey.trim() && !settings.aiHasKey) {
+      toast.error("API key is required");
+      return;
+    }
+    if (isCustom && !baseUrl.trim()) {
+      toast.error("Base URL is required for custom provider");
+      return;
+    }
+    if (!model.trim()) {
+      toast.error("Please select or enter a model");
+      return;
+    }
+    setSaveLoading(true);
+    try {
+      await onPatchSettings({
+        aiProvider: selected,
+        aiApiKey: apiKey.trim() || undefined,
+        aiBaseUrl: baseUrl.trim() || null,
+        aiModel: model.trim(),
+      } as UpdateRuntimeSettingsPayload);
+      toast.success(`Saved ${currentProvider?.name || selected} — ${model}`);
+      setApiKey("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div>
+        <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-white">Providers</h2>
+        <p className="mt-1 text-[12.5px] leading-5 text-white/55">
+          Choose a ready provider, paste your key, test the connection, then pick a model. Each provider has its own folder and isolated integration.
+        </p>
+        {settings.aiProvider && (
+          <p className="mt-2 text-[12px] text-white/40">
+            Active: <span className="text-white/80">{settings.aiProvider}</span> {settings.aiModel && <>· <span className="text-white/80">{settings.aiModel}</span></>} {settings.aiApiKeyMasked && <>· <span className="text-white/40">{settings.aiApiKeyMasked}</span></>}
+          </p>
+        )}
+      </div>
+
+      <div className="overflow-hidden rounded-[12px] border border-white/[0.06] bg-[#1e1e1e]">
+        {(providers.length > 0 ? providers : FALLBACK_PROVIDERS).map((p) => {
+          const active = selected === p.id;
+          const isStoredActive = settings.aiProvider === p.id;
+          return (
+            <button
+              key={p.id}
+              onClick={() => {
+                setSelected(p.id);
+                setTestState({ ok: null, message: "", loading: false });
+                setModels([]);
+                if (p.id !== "custom") setBaseUrl("");
+              }}
+              className={`flex w-full items-center gap-3 border-b border-white/[0.06] px-4 py-3 text-left transition-colors last:border-b-0 ${
+                active ? "bg-[#2a241e] border-l-2 border-l-[#c9a86a] pl-[14px]" : "hover:bg-white/[0.03]"
+              }`}
+            >
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "bg-white/[0.08] text-white" : "bg-white/[0.06] text-white/50"}`}>
+                <span className="text-[11px] font-semibold">{p.name.slice(0, 2).toUpperCase()}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium leading-none text-white">{p.name}</p>
+                <p className="mt-1 truncate text-[11px] leading-none text-white/40">{p.defaultBaseUrl || "Custom URL required"}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {isStoredActive && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">Active</span>}
+                {active && <span className="text-[12px] text-amber-400">✓</span>}
+                <span className="text-[14px] text-white/20">›</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="overflow-hidden rounded-[16px] border border-white/[0.06] bg-[#1e1e1e]">
+        <div className="border-b border-white/[0.06] px-4 py-3">
+          <p className="text-[13px] font-medium text-white">{currentProvider?.name || "Custom"} settings</p>
+          <p className="mt-1 text-[12px] text-white/50">Paste your key, test, then choose a model. Keys are encrypted before storage.</p>
+        </div>
+
+        <div className="space-y-3 p-4">
+          {isCustom && (
+            <div>
+              <label className="text-[11px] font-medium tracking-wide text-white/60">Company / Provider Name</label>
+              <input
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="e.g. MyCompany, Acme AI"
+                className="mt-1.5 w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-3 py-2 text-[12.5px] text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none"
+              />
+              <p className="mt-1 text-[11px] text-white/35">Name for your custom OpenAI-compatible provider</p>
+            </div>
+          )}
+          <div>
+            <label className="text-[11px] font-medium tracking-wide text-white/60">API Key</label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={settings.aiHasKey && settings.aiProvider === selected ? `Stored: ${settings.aiApiKeyMasked} — enter new to replace` : "sk-... or your provider key"}
+              className="mt-1.5 w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-3 py-2 text-[12.5px] text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium tracking-wide text-white/60">
+              {isCustom ? "Base URL (required)" : "Base URL (optional)"}
+            </label>
+            <input
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder={currentProvider?.defaultBaseUrl || "https://api.example.com/v1"}
+              className="mt-1.5 w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-3 py-2 text-[12.5px] text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none"
+            />
+            {isCustom && <p className="mt-1 text-[11px] text-white/35">Custom OpenAI-compatible endpoint, e.g. https://your-proxy.com/v1</p>}
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium tracking-wide text-white/60">Model</label>
+            <div className="mt-1.5 flex gap-2">
+              <input
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder={isCustom ? "model-id e.g. my-model-1" : "Select or type model id"}
+                className="flex-1 rounded-lg border border-white/10 bg-[#2a2a2a] px-3 py-2 text-[12.5px] text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none"
+              />
+              <button
+                onClick={handleFetchModels}
+                className="shrink-0 rounded-lg border border-white/10 bg-[#2a2a2a] px-3 py-2 text-[12px] font-medium text-white/80 hover:bg-[#303030] hover:text-white"
+              >
+                List
+              </button>
+            </div>
+            {models.length > 0 && (
+              <div className="mt-2 max-h-[160px] overflow-y-auto rounded-lg border border-white/10 bg-[#232323] p-1">
+                {models.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setModel(m.id)}
+                    className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[12px] ${model === m.id ? "bg-white/[0.08] text-white" : "text-white/70 hover:bg-white/[0.04] hover:text-white"}`}
+                  >
+                    <span className="truncate">{m.id}</span>
+                    <span className="ml-2 shrink-0 text-[11px] text-white/30">{m.name !== m.id ? m.name.slice(0, 20) : ""}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {testState.message && (
+            <div className={`rounded-lg border px-3 py-2 text-[12px] ${testState.ok ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : testState.ok === false ? "border-red-500/20 bg-red-500/10 text-red-300" : "border-white/10 bg-white/[0.04] text-white/60"}`}>
+              {testState.message}
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleTest}
+              disabled={testState.loading}
+              className="flex-1 rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2 text-[12.5px] font-medium text-white hover:bg-[#303030] disabled:opacity-50"
+            >
+              {testState.loading ? "Testing…" : "Test connection"}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saveLoading}
+              className="flex-1 rounded-lg bg-white px-4 py-2 text-[12.5px] font-medium text-black hover:bg-white/90 disabled:opacity-50"
+            >
+              {saveLoading ? "Saving…" : "Save provider"}
+            </button>
+          </div>
+
+          <p className="text-[11px] leading-4 text-white/30">
+            Test does a live call to <span className="text-white/50">{currentProvider?.defaultBaseUrl || baseUrl || "your URL"}</span> — no fake data. The key is encrypted with Fernet before storage and never sent back as plain text.
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -294,9 +571,7 @@ function SettingsRow({
   border?: boolean;
 }) {
   return (
-    <div
-      className={`flex items-center justify-between gap-6 px-4 py-3.5 ${border ? "border-b border-white/[0.06]" : ""}`}
-    >
+    <div className={`flex items-center justify-between gap-6 px-4 py-3.5 ${border ? "border-b border-white/[0.06]" : ""}`}>
       <div className="min-w-0 pr-4">
         <p className="text-[13px] font-medium leading-none text-white">{title}</p>
         <p className="mt-1.5 text-[12.5px] leading-5 text-white/55">{description}</p>
@@ -309,7 +584,6 @@ function SettingsRow({
 const selectClassName =
   "h-8 w-[152px] rounded-lg border border-white/10 bg-[#2a2a2a] text-[12.5px] font-medium text-white hover:bg-[#303030] focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-white/60";
 
-const selectContentClassName =
-  "rounded-xl border border-white/10 bg-[#232323] text-white shadow-[0_16px_32px_rgba(0,0,0,0.5)]";
+const selectContentClassName = "rounded-xl border border-white/10 bg-[#232323] text-white shadow-[0_16px_32px_rgba(0,0,0,0.5)]";
 
 const selectItemClassName = "rounded-md text-[12.5px] focus:bg-white/[0.06] focus:text-white";

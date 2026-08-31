@@ -25,6 +25,11 @@ export interface RuntimeSettings {
   externalIngestionMaxRps: number;
   externalIngestionRetryAttempts: number;
   externalIngestionBackoffSeconds: number;
+  aiProvider?: string | null;
+  aiModel?: string | null;
+  aiBaseUrl?: string | null;
+  aiApiKeyMasked?: string | null;
+  aiHasKey?: boolean;
   updatedAt: string;
 }
 
@@ -41,6 +46,36 @@ export interface UpdateRuntimeSettingsPayload {
   externalIngestionMaxRps?: number;
   externalIngestionRetryAttempts?: number;
   externalIngestionBackoffSeconds?: number;
+  aiProvider?: string | null;
+  aiApiKey?: string | null;
+  aiBaseUrl?: string | null;
+  aiModel?: string | null;
+}
+
+export interface ProviderInfo {
+  id: string;
+  name: string;
+  defaultBaseUrl: string | null;
+  docsUrl: string | null;
+}
+
+export interface ProviderTestPayload {
+  provider: string;
+  apiKey: string;
+  baseUrl?: string | null;
+  model?: string | null;
+}
+
+export interface ProviderTestResult {
+  ok: boolean;
+  message: string;
+  latencyMs?: number | null;
+}
+
+export interface ProviderModel {
+  id: string;
+  name: string;
+  created?: number | null;
 }
 
 export interface ScanSessionDetail {
@@ -56,13 +91,6 @@ export interface ScanSessionDetail {
   verdict: "safe" | "issues_found";
   completedAt: string | null;
   errorMessage: string | null;
-}
-
-export interface RemediationExecutionResult {
-  action: RemediationActionResult;
-  session: Session;
-  findings: Finding[];
-  candidateFindings: Finding[];
 }
 
 export interface WorkflowRepoIntelligenceSummary {
@@ -131,44 +159,6 @@ export interface ExplainFindingPayload {
   findingId: string;
 }
 
-export interface GenerateFixPayload {
-  sessionId: string;
-  findingId: string;
-}
-
-export interface ApplyFixPayload {
-  sessionId: string;
-  findingId: string;
-  strategyId?: string | null;
-  file: string;
-  beforeSnippet: string;
-  afterSnippet: string;
-  diff: string;
-  manualEdit: boolean;
-  approvalAcknowledged?: boolean;
-  mode: "single" | "batch";
-}
-
-export interface RejectFixPayload {
-  sessionId: string;
-  findingId: string;
-  strategyId?: string | null;
-}
-
-export interface RollbackFixPayload {
-  sessionId: string;
-  findingId: string;
-  checkpointId?: string | null;
-}
-
-export interface RetryFixPayload {
-  sessionId: string;
-  findingId: string;
-  mode: "single" | "batch";
-  excludedStrategyIds: string[];
-  attemptedStrategyIds: string[];
-}
-
 export async function listSessions(): Promise<Session[]> {
   const data = await request<SessionApiResponse[]>("/sessions");
   return data.map(mapSession);
@@ -212,12 +202,37 @@ export async function updateRuntimeSettings(payload: UpdateRuntimeSettingsPayloa
   if (payload.externalIngestionMaxRps !== undefined) body.external_ingestion_max_rps = payload.externalIngestionMaxRps;
   if (payload.externalIngestionRetryAttempts !== undefined) body.external_ingestion_retry_attempts = payload.externalIngestionRetryAttempts;
   if (payload.externalIngestionBackoffSeconds !== undefined) body.external_ingestion_backoff_seconds = payload.externalIngestionBackoffSeconds;
+  if (payload.aiProvider !== undefined) body.ai_provider = payload.aiProvider;
+  if (payload.aiApiKey !== undefined) body.ai_api_key = payload.aiApiKey;
+  if (payload.aiBaseUrl !== undefined) body.ai_base_url = payload.aiBaseUrl;
+  if (payload.aiModel !== undefined) body.ai_model = payload.aiModel;
 
   const data = await request<RuntimeSettingsApiResponse>("/settings/runtime", {
     method: "PATCH",
     body: JSON.stringify(body),
   });
   return mapRuntimeSettings(data);
+}
+
+export async function listProviders(): Promise<ProviderInfo[]> {
+  const data = await request<ProviderInfoApiResponse[]>("/settings/providers");
+  return data.map((p) => ({ id: p.id, name: p.name, defaultBaseUrl: p.default_base_url, docsUrl: p.docs_url }));
+}
+
+export async function testProvider(payload: ProviderTestPayload): Promise<ProviderTestResult> {
+  const data = await request<ProviderTestApiResponse>("/settings/providers/test", {
+    method: "POST",
+    body: JSON.stringify({ provider: payload.provider, api_key: payload.apiKey, base_url: payload.baseUrl ?? null, model: payload.model ?? null }),
+  });
+  return { ok: data.ok, message: data.message, latencyMs: data.latency_ms };
+}
+
+export async function listProviderModels(payload: ProviderTestPayload): Promise<ProviderModel[]> {
+  const data = await request<ProviderModelsApiResponse>("/settings/providers/models", {
+    method: "POST",
+    body: JSON.stringify({ provider: payload.provider, api_key: payload.apiKey, base_url: payload.baseUrl ?? null }),
+  });
+  return data.models.map((m) => ({ id: m.id, name: m.name, created: m.created ?? null }));
 }
 
 export function subscribeToScanEvents(
@@ -271,84 +286,6 @@ export async function explainFinding(payload: ExplainFindingPayload): Promise<Re
     }),
   });
   return mapExplanation(data);
-}
-
-export async function generateFix(payload: GenerateFixPayload): Promise<RemediationPlan> {
-  const data = await request<RemediationPlanApiResponse>("/remediation/fix", {
-    method: "POST",
-    body: JSON.stringify({
-      session_id: payload.sessionId,
-      finding_id: payload.findingId,
-    }),
-  });
-  return mapRemediationPlan(data);
-}
-
-export async function generateBatchRemediation(sessionId: string): Promise<RemediationPlan> {
-  const data = await request<RemediationPlanApiResponse>("/remediation/fix/batch", {
-    method: "POST",
-    body: JSON.stringify({
-      session_id: sessionId,
-    }),
-  });
-  return mapRemediationPlan(data);
-}
-
-export async function applyFix(payload: ApplyFixPayload): Promise<RemediationExecutionResult> {
-  const data = await request<RemediationExecutionApiResponse>("/remediation/fix/apply", {
-    method: "POST",
-    body: JSON.stringify({
-      session_id: payload.sessionId,
-      finding_id: payload.findingId,
-      strategy_id: payload.strategyId ?? null,
-      file: payload.file,
-      before_snippet: payload.beforeSnippet,
-        after_snippet: payload.afterSnippet,
-        diff: payload.diff,
-        manual_edit: payload.manualEdit,
-        approval_acknowledged: payload.approvalAcknowledged ?? false,
-        mode: payload.mode,
-      }),
-  });
-  return mapRemediationExecution(data);
-}
-
-export async function rejectFix(payload: RejectFixPayload): Promise<RemediationExecutionResult> {
-  const data = await request<RemediationExecutionApiResponse>("/remediation/fix/reject", {
-    method: "POST",
-    body: JSON.stringify({
-      session_id: payload.sessionId,
-      finding_id: payload.findingId,
-      strategy_id: payload.strategyId ?? null,
-    }),
-  });
-  return mapRemediationExecution(data);
-}
-
-export async function rollbackFix(payload: RollbackFixPayload): Promise<RemediationExecutionResult> {
-  const data = await request<RemediationExecutionApiResponse>("/remediation/fix/rollback", {
-    method: "POST",
-    body: JSON.stringify({
-      session_id: payload.sessionId,
-      finding_id: payload.findingId,
-      checkpoint_id: payload.checkpointId ?? null,
-    }),
-  });
-  return mapRemediationExecution(data);
-}
-
-export async function retryFixStrategy(payload: RetryFixPayload): Promise<RemediationPlan> {
-  const data = await request<RemediationPlanApiResponse>("/remediation/fix/retry", {
-    method: "POST",
-    body: JSON.stringify({
-      session_id: payload.sessionId,
-      finding_id: payload.findingId,
-      mode: payload.mode,
-      excluded_strategy_ids: payload.excludedStrategyIds,
-      attempted_strategy_ids: payload.attemptedStrategyIds,
-    }),
-  });
-  return mapRemediationPlan(data);
 }
 
 export async function getRepoIntelligenceSummary(limit = 25): Promise<WorkflowRepoIntelligenceSummary> {
@@ -800,6 +737,11 @@ function mapRuntimeSettings(data: RuntimeSettingsApiResponse): RuntimeSettings {
     externalIngestionMaxRps: data.external_ingestion_max_rps,
     externalIngestionRetryAttempts: data.external_ingestion_retry_attempts,
     externalIngestionBackoffSeconds: data.external_ingestion_backoff_seconds,
+    aiProvider: (data as unknown as Record<string, unknown>).ai_provider as string | null | undefined ?? null,
+    aiModel: (data as unknown as Record<string, unknown>).ai_model as string | null | undefined ?? null,
+    aiBaseUrl: (data as unknown as Record<string, unknown>).ai_base_url as string | null | undefined ?? null,
+    aiApiKeyMasked: (data as unknown as Record<string, unknown>).ai_api_key_masked as string | null | undefined ?? null,
+    aiHasKey: Boolean((data as unknown as Record<string, unknown>).ai_has_key),
     updatedAt: data.updated_at,
   };
 }
@@ -1199,7 +1141,29 @@ interface RuntimeSettingsApiResponse {
   external_ingestion_max_rps: number;
   external_ingestion_retry_attempts: number;
   external_ingestion_backoff_seconds: number;
+  ai_provider?: string | null;
+  ai_model?: string | null;
+  ai_base_url?: string | null;
+  ai_api_key_masked?: string | null;
+  ai_has_key?: boolean;
   updated_at: string;
+}
+
+interface ProviderInfoApiResponse {
+  id: string;
+  name: string;
+  default_base_url: string | null;
+  docs_url: string | null;
+}
+
+interface ProviderTestApiResponse {
+  ok: boolean;
+  message: string;
+  latency_ms: number | null;
+}
+
+interface ProviderModelsApiResponse {
+  models: Array<{ id: string; name: string; created?: number | null }>;
 }
 
 interface WorkflowRepoIntelligenceSummaryApiResponse {
