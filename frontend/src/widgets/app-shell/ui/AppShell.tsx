@@ -31,12 +31,14 @@ export function AppShell({ children, onToggleSidebar, isSidebarCollapsed, onNavi
   }, [controls]);
 
   return (
-    <div className={`flex h-screen w-screen overflow-hidden ${hasElectronTitlebar ? (maximized ? "rounded-none" : "rounded-t-[14px]") : ""}`}>
+    <div
+      className={`flex h-screen w-screen overflow-hidden p-0 ${hasElectronTitlebar ? (maximized ? "rounded-none" : "rounded-[12px] border border-white/[0.07] shadow-[0_16px_64px_rgba(0,0,0,0.55)]") : ""}`}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative flex h-full min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden bg-[#1a1a1a]"
+        className={`relative flex h-full min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden bg-[#1a1a1a] ${hasElectronTitlebar && !maximized ? "rounded-[12px] border border-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : ""}`}
       >
         <WindowTitleBar
           controls={controls}

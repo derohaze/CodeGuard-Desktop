@@ -10,7 +10,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      position="top-right"
+      position="top-center"
       closeButton
       expand={false}
       visibleToasts={4}
@@ -26,14 +26,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast !w-auto !min-w-[300px] !max-w-[380px] relative flex items-center gap-2.5 rounded-[10px] border border-white/[0.08] !bg-[#262626] px-3 py-2.5 pr-8 shadow-[0_8px_24px_rgba(0,0,0,0.45)] !backdrop-blur-none",
+            "group toast !w-[360px] !max-w-[90vw] relative flex items-center gap-2.5 rounded-[10px] border border-white/[0.08] !bg-[#262626] px-3 py-2 pr-9 shadow-[0_12px_32px_rgba(0,0,0,0.55)] !backdrop-blur-none",
           actionButton: "group-[.toast]:bg-white group-[.toast]:text-black text-[12px] h-7 rounded-md px-3",
           cancelButton: "group-[.toast]:bg-white/10 group-[.toast]:text-white/70 text-[12px] h-7 rounded-md px-3",
           title: "!text-[12.5px] !font-medium !leading-none !text-white !tracking-[-0.01em]",
           description: "!text-[12px] !leading-4 !text-white/60",
           icon: "!mr-0 shrink-0",
           closeButton:
-            "!absolute !left-auto !right-1 !top-1/2 !-translate-y-1/2 !bg-transparent !border-0 !shadow-none !text-white/35 hover:!text-white hover:!bg-white/[0.06] !rounded-md !h-6 !w-6 !p-0 !m-0",
+            "!absolute !left-auto !right-1.5 !top-1/2 !-translate-y-1/2 !bg-transparent !border-0 !shadow-none !text-white/40 hover:!text-white hover:!bg-white/[0.06] !rounded-md !h-6 !w-6 !p-0 !m-0",
         },
         duration: 4000,
       }}

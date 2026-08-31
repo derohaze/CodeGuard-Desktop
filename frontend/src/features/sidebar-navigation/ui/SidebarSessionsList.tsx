@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { Reorder } from "framer-motion";
 import {
-  Clock01Icon,
   Delete02Icon,
   Folder01Icon,
   Message01Icon,
@@ -40,9 +39,9 @@ export function SidebarSessionsList({
   onDeleteAllSessions: () => void;
   onReorderSessions: (orderedSessionIds: string[]) => void;
 }) {
-  const [organizeMode, setOrganizeMode] = useState<"repo" | "time" | null>(null);
+  const [organizeMode, setOrganizeMode] = useState<"repo" | null>(null);
   const [sortMode, setSortMode] = useState<"created" | "updated" | null>(null);
-  const [showMode, setShowMode] = useState<"all" | "relevant" | null>(null);
+  const [showMode, setShowMode] = useState<"relevant" | null>(null);
 
   const filteredSessions = useMemo(() => {
     const visibleSessions = showMode === "relevant"
@@ -92,13 +91,6 @@ export function SidebarSessionsList({
           icon: Folder01Icon,
           onSelect: () => setOrganizeMode((current) => (current === "repo" ? null : "repo")),
         },
-        {
-          label: "Chronological list",
-          value: "time" as const,
-          selected: organizeMode === "time",
-          icon: Clock01Icon,
-          onSelect: () => setOrganizeMode((current) => (current === "time" ? null : "time")),
-        },
       ],
     },
     {
@@ -124,14 +116,7 @@ export function SidebarSessionsList({
       title: "Show",
       items: [
         {
-          label: "All sessions",
-          value: "all" as const,
-          selected: showMode === "all",
-          icon: Folder01Icon,
-          onSelect: () => setShowMode((current) => (current === "all" ? null : "all")),
-        },
-        {
-          label: "Relevant",
+          label: "Relevant only",
           value: "relevant" as const,
           selected: showMode === "relevant",
           icon: SparklesIcon,
