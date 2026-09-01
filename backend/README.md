@@ -4,7 +4,7 @@ The backend is split by runtime responsibility. There is no API gateway in the l
 
 | Runtime | Service | Port | Responsibility |
 |---|---|---:|---|
-| Python | `python-api` | 8000 | FastAPI contracts, scan orchestration, AI routing, MongoDB/Redis coordination, remediation workflows |
+| Python | `python-api` | 9000 | FastAPI contracts, scan orchestration, AI routing, MongoDB/Redis coordination, remediation workflows |
 | Node.js | `node-io` | 7001 | Local runtime I/O health and process metadata; it does not proxy Python API traffic |
 | Rust | `rust-indexer` | 7100 | Native bounded repository indexing and hotspot pre-analysis when the binary is built |
 
@@ -31,7 +31,7 @@ If Cargo is installed, `RUST_INDEXER_AUTO_BUILD=true` lets `backend/main.py` bui
 Frontend security API calls should target Python directly:
 
 ```text
-http://127.0.0.1:8000/api/v1
+http://127.0.0.1:9000/api/v1
 ```
 
 Node no longer owns `/api/v1/*`; calling those paths on `node-io` returns `404`.

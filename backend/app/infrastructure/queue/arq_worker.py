@@ -17,15 +17,15 @@ from app.infrastructure.settings.runtime_settings_service import RuntimeSettings
 
 async def run_scan_job(_ctx: dict, session_id: str, job_id: str) -> None:
     service = ScanExecutionService(
-        MongoScanSessionRepository(),
-        build_ai_client(),
-        MongoScanJobRepository(),
-        WorkflowPersistenceService(
+        repository=MongoScanSessionRepository(),
+        ai_client=build_ai_client(),
+        job_repository=MongoScanJobRepository(),
+        workflow_persistence=WorkflowPersistenceService(
             audit_events=MongoAuditEventRepository(),
             verification_runs=MongoVerificationRunRepository(),
         ),
-        ScanLockManager(),
-        RuntimeSettingsService(
+        scan_lock_manager=ScanLockManager(),
+        runtime_settings_service=RuntimeSettingsService(
             RuntimeSettingsRepository(),
         ),
     )

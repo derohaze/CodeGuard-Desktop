@@ -18,7 +18,7 @@ describe("fetchWithStartupRetry", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const requestPromise = fetchWithStartupRetry("http://127.0.0.1:8000/api/v1/health/live");
+    const requestPromise = fetchWithStartupRetry("http://127.0.0.1:9000/api/v1/health/live");
     await vi.runAllTimersAsync();
     const response = await requestPromise;
 
@@ -43,8 +43,8 @@ describe("fetchWithStartupRetry", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const [settingsResponse, sessionsResponse] = await Promise.all([
-      fetchWithStartupRetry("http://127.0.0.1:8000/api/v1/settings/runtime"),
-      fetchWithStartupRetry("http://127.0.0.1:8000/api/v1/sessions"),
+      fetchWithStartupRetry("http://127.0.0.1:9000/api/v1/settings/runtime"),
+      fetchWithStartupRetry("http://127.0.0.1:9000/api/v1/sessions"),
     ]);
 
     expect(settingsResponse.ok).toBe(true);
@@ -58,7 +58,7 @@ describe("fetchWithStartupRetry", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      fetchWithStartupRetry("http://127.0.0.1:8000/api/v1/scans", {
+      fetchWithStartupRetry("http://127.0.0.1:9000/api/v1/scans", {
         method: "POST",
       }),
     ).rejects.toThrow("Failed to fetch");

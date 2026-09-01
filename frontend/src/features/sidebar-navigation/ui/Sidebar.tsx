@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import type { Session } from "@/entities/session/model/types";
 import { useResolvedTheme } from "@/shared/lib/use-resolved-theme";
@@ -69,19 +68,17 @@ export function Sidebar({
 
   return (
     <div
-      className="relative h-full shrink-0 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
+      className="relative h-full shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out"
       style={{ width: isCollapsed ? 0 : 300 }}
       aria-hidden={isCollapsed}
     >
-      <motion.aside
-        className={`absolute inset-y-0 left-0 flex w-[300px] min-h-0 flex-col overflow-hidden ${isLight ? "bg-[#f7f6f2]" : "bg-[#1a1a1a]"}`}
-        style={tokens}
-        initial={false}
-        animate={{
-          x: isCollapsed ? -300 : 0,
+      <aside
+        className="absolute inset-y-0 left-0 flex w-[300px] min-h-0 flex-col overflow-hidden bg-surface-sidebar"
+        style={{
+          ...tokens,
+          transform: isCollapsed ? "translateX(-300px)" : "translateX(0)",
           opacity: isCollapsed ? 0 : 1,
         }}
-        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
       >
         <SidebarHeader />
         <SidebarActions currentScreen={currentScreen} onNavigate={onNavigate} />
@@ -95,7 +92,7 @@ export function Sidebar({
           onReorderSessions={onReorderSessions}
         />
         <SidebarFooter onOpenSettings={onOpenSettings} />
-      </motion.aside>
+      </aside>
     </div>
   );
 }

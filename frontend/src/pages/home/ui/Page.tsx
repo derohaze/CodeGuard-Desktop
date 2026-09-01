@@ -311,7 +311,7 @@ export default function Page() {
       {view === "workspace" ? (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
           <Sidebar sessions={sessions} currentScreen={screen} onNavigate={handleNavigate} activeSessionId={activeSessionId} onOpenSession={handleOpenSession} onDeleteSession={handleDeleteSession} onDeleteAllSessions={handleDeleteAllSessions} onReorderSessions={handleReorderSessions} sessionOrder={sessionOrder} isCollapsed={isSidebarCollapsed} onOpenSettings={() => setView("settings")} />
-          <div className={`relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-[#121212] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isSidebarCollapsed ? "rounded-t-[16px]" : "rounded-tl-[16px]"}`}>
+          <div className={`relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-[#121212] transition-[border-radius] duration-200 ease-in-out ${isSidebarCollapsed ? "rounded-t-[16px]" : "rounded-tl-[16px]"}`}>
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               {sessionWorkspaceTabs.length > 0 && <SessionWorkspaceTabs session={activeSession} currentScreen={screen} tabs={sessionWorkspaceTabs} onNavigate={(s) => setScreen(s)} />}
               <div className="flex min-h-0 min-w-0 flex-1">{renderContent()}</div>

@@ -241,17 +241,17 @@ class ScanExecutionService:
         logs = list(session.progress_logs)
         started_at = time.monotonic()
         lock_lease: ScanLockLease | None = None
-        if job_id and self.job_repository is not None and self.scan_lock_manager is not None:
-            job = await self.job_repository.get_by_id(job_id)
-            if job is not None:
-                lock_lease = await self.scan_lock_manager.build_lease_from_job(
-                    session_id=session_id,
-                    source_fingerprint=job.source_fingerprint or session.source_fingerprint,
-                    owner=job.lock_owner,
-                )
-                await self.scan_lock_manager.refresh_submission_locks(lock_lease)
         ai_client = self.ai_client
         try:
+            if job_id and self.job_repository is not None and self.scan_lock_manager is not None:
+                job = await self.job_repository.get_by_id(job_id)
+                if job is not None:
+                    lock_lease = await self.scan_lock_manager.build_lease_from_job(
+                        session_id=session_id,
+                        source_fingerprint=job.source_fingerprint or session.source_fingerprint,
+                        owner=job.lock_owner,
+                    )
+                    await self.scan_lock_manager.refresh_submission_locks(lock_lease)
             ai_client = await self._resolve_ai_client()
             getattr(ai_client, "reset_runtime_state", lambda: None)()
             detection_agent = DetectionAgent(ai_client)

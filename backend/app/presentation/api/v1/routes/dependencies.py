@@ -88,12 +88,12 @@ def get_ai_client() -> SecurityAnalysisAIClient:
 @lru_cache
 def get_scan_execution_service() -> ScanExecutionService:
     return ScanExecutionService(
-        get_repository(),
-        get_ai_client(),
-        get_runtime_settings_service(),
-        get_scan_job_repository(),
-        get_workflow_persistence_service(),
-        get_scan_lock_manager(),
+        repository=get_repository(),
+        ai_client=get_ai_client(),
+        job_repository=get_scan_job_repository(),
+        workflow_persistence=get_workflow_persistence_service(),
+        scan_lock_manager=get_scan_lock_manager(),
+        runtime_settings_service=get_runtime_settings_service(),
     )
 
 

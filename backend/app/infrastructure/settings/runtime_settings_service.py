@@ -87,7 +87,7 @@ class RuntimeSettingsService:
             auto_open_results=bool(document.get("auto_open_results", True)),
             remember_sidebar_state=bool(document.get("remember_sidebar_state", True)),
             motion_profile=str(document.get("motion_profile", "fluid")),
-            theme=str(document.get("theme", "light")),
+            theme=str(document.get("theme", "system")),
             surface_contrast=str(document.get("surface_contrast", "soft")),
             remediation_max_attempts=int(document.get("remediation_max_attempts", 3)),
             remediation_reuse_explanation=bool(document.get("remediation_reuse_explanation", True)),

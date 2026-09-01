@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     app_name: str = Field(default="CodeGuard", alias="APP_NAME")
     app_env: str = Field(default="development", alias="APP_ENV")
     app_host: str = Field(default="127.0.0.1", alias="APP_HOST")
-    app_port: int = Field(default=8000, alias="APP_PORT")
+    app_port: int = Field(default=9000, alias="APP_PORT")
     api_workers: int = Field(default=1, alias="API_WORKERS")
     app_cors_origins: list[str] | str = Field(default="http://localhost:8080", alias="APP_CORS_ORIGINS")
     ai_provider_order: list[str] | str = Field(default="nvidia", alias="AI_PROVIDER_ORDER")

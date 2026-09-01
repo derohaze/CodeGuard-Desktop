@@ -68,41 +68,41 @@
   :root[data-theme="light"] {
     color-scheme: light;
 
-    --background: 0 0% 99%;
+    --background: 40 18% 97.5%;
     --foreground: 0 0% 13%;
 
-    --card: 0 0% 100%;
+    --card: 40 24% 98%;
     --card-foreground: 0 0% 15%;
 
-    --popover: 0 0% 100%;
+    --popover: 40 24% 98%;
     --popover-foreground: 0 0% 20%;
 
     --primary: 0 0% 12%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 0 0% 95%;
+    --secondary: 40 14% 93%;
     --secondary-foreground: 0 0% 22%;
 
-    --muted: 0 0% 95%;
+    --muted: 40 14% 93%;
     --muted-foreground: 0 0% 44%;
 
-    --accent: 0 0% 92%;
+    --accent: 40 14% 90%;
     --accent-foreground: 0 0% 14%;
 
     --destructive: 358 60% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 89%;
-    --input: 0 0% 84%;
+    --border: 40 10% 86%;
+    --input: 40 10% 82%;
     --ring: 0 0% 58%;
 
-    /* Custom tokens — sidebar beige, pages white */
-    --workspace: 0 0% 98%;
-    --surface: 0 0% 100%;
-    --surface-sidebar: 40 22% 97%;
-    --surface-secondary: 0 0% 95%;
-    --surface-code: 0 0% 96%;
-    --surface-dot: 0 0% 87%;
+    /* Custom tokens — the chrome stays slightly darker than the warm page */
+    --workspace: 40 18% 95%;
+    --surface: 40 24% 97%;
+    --surface-sidebar: 40 18% 92%;
+    --surface-secondary: 40 14% 94.5%;
+    --surface-code: 40 16% 95.5%;
+    --surface-dot: 40 8% 84%;
 
     --text-primary: 0 0% 14%;
     --text-secondary: 0 0% 41%;
@@ -296,15 +296,15 @@ the many feature files that use arbitrary-value colors. */
    reads correctly on light backgrounds. Scoped under [data-theme="light"]
    so specificity beats the default dark-mode (and global) overrides. */
 @layer utilities {
-  :root[data-theme="light"] .bg-\[\#1a1a1a\] { background-color: #f7f6f2; }
-  :root[data-theme="light"] .bg-\[\#171717\] { background-color: #f7f6f2; }
-  :root[data-theme="light"] .bg-\[\#121212\] { background-color: #faf9f6; }
-  :root[data-theme="light"] .bg-\[\#1e1e1e\] { background-color: #ffffff; }
-  :root[data-theme="light"] .bg-\[\#232323\] { background-color: #f5f4ef; }
-  :root[data-theme="light"] .bg-\[\#2a2a2a\] { background-color: #ffffff; }
-  :root[data-theme="light"] .bg-\[\#303030\] { background-color: #efeee8; }
-  :root[data-theme="light"] .bg-\[\#262626\] { background-color: #ffffff; }
-  :root[data-theme="light"] .bg-\[\#2a241e\] { background-color: #f1e8d8; }
+  :root[data-theme="light"] .bg-\[\#1a1a1a\] { background-color: #ebe9e3; }
+  :root[data-theme="light"] .bg-\[\#171717\] { background-color: #efede7; }
+  :root[data-theme="light"] .bg-\[\#121212\] { background-color: #f8f7f3; }
+  :root[data-theme="light"] .bg-\[\#1e1e1e\] { background-color: #fbfaf7; }
+  :root[data-theme="light"] .bg-\[\#232323\] { background-color: #f1efe9; }
+  :root[data-theme="light"] .bg-\[\#2a2a2a\] { background-color: #f5f3ed; }
+  :root[data-theme="light"] .bg-\[\#303030\] { background-color: #ebe9e3; }
+  :root[data-theme="light"] .bg-\[\#262626\] { background-color: #f5f3ed; }
+  :root[data-theme="light"] .bg-\[\#2a241e\] { background-color: #eee5d5; }
   /* surfaces that must stay dark (red close hover restores below) */
   :root[data-theme="light"] .bg-\[\#3a3a3a\] { background-color: #3a3a3a; }
   :root[data-theme="light"] .bg-\[\#c42b1c\] { background-color: #c42b1c; }

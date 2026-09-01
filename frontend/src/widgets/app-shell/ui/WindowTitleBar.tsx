@@ -103,7 +103,7 @@ function TitleBarMenu({
       <div
         className={cn(
           "absolute left-0 top-full z-50 mt-1 grid min-w-[220px] overflow-hidden rounded-xl border border-white/[0.08] bg-[#232323] shadow-[0_16px_40px_rgba(0,0,0,0.45)]",
-          "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "transition-[opacity,grid-template-rows] duration-150 ease-out",
           isOpen ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0",
         )}
       >
@@ -115,7 +115,7 @@ function TitleBarMenu({
                   <div
                     key={`sep-${index}`}
                     className={cn(
-                      "mx-1 my-1 h-px bg-white/[0.06] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                      "mx-1 my-1 h-px bg-white/[0.06] transition-opacity duration-100 ease-out",
                       isOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
                     )}
                     style={{ transitionDelay: isOpen ? `${index * 30}ms` : "0ms" }}
@@ -127,7 +127,7 @@ function TitleBarMenu({
                   <div
                     key={`hdr-${index}`}
                     className={cn(
-                      "px-2 py-1 text-[11px] font-medium tracking-wide text-white/30 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                      "px-2 py-1 text-[11px] font-medium tracking-wide text-white/30 transition-opacity duration-100 ease-out",
                       isOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
                     )}
                     style={{ transitionDelay: isOpen ? `${index * 30}ms` : "0ms" }}
@@ -143,7 +143,7 @@ function TitleBarMenu({
                 </span>
               );
               const baseClass = cn(
-                "flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[12.5px] font-normal leading-none transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                "flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[12.5px] font-normal leading-none transition-opacity duration-100 ease-out",
                 isOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
                 item.disabled
                   ? "cursor-default text-white/25"

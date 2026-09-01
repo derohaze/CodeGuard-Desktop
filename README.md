@@ -8,7 +8,7 @@ CodeGuard employs a multi-runtime backend architecture designed for performance 
 
 | Runtime | Service | Port | Responsibility |
 |---|---|---|---|
-| Python | `python-api` | 8000 | FastAPI contracts, scan orchestration, AI routing, MongoDB/Redis coordination, remediation workflows |
+| Python | `python-api` | 9000 | FastAPI contracts, scan orchestration, AI routing, MongoDB/Redis coordination, remediation workflows |
 | Node.js | `node-io` | 7001 | Local runtime I/O health and process metadata |
 | Rust | `rust-indexer` | 7100 | Native bounded repository indexing and hotspot pre-analysis |
 
@@ -111,7 +111,7 @@ The platform includes specialized skills for various security domains:
 
 The main API endpoint is:
 ```
-http://127.0.0.1:8000/api/v1
+http://127.0.0.1:9000/api/v1
 ```
 
 Available endpoints:
@@ -153,7 +153,7 @@ Key configuration options can be set through environment variables or runtime se
 
 - `APP_ENV` - Application environment (development/production)
 - `APP_HOST` - API host address
-- `APP_PORT` - API port (default: 8000)
+- `APP_PORT` - API port (default: 9000)
 - `NODE_IO_HOST` - Node.js I/O host
 - `NODE_IO_PORT` - Node.js I/O port (default: 7001)
 - `RUST_INDEXER_ENABLED` - Enable Rust indexer

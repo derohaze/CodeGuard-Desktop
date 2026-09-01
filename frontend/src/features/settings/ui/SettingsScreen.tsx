@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -73,18 +72,16 @@ export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, is
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
   return (
-    <div key="settings-screen" className="flex min-h-0 flex-1 overflow-hidden bg-[#171717]">
+    <div className="flex min-h-0 flex-1 overflow-hidden bg-[#171717]">
       {/* Left nav — collapsible like workspace sidebar, Codex warm dark */}
       <div
-        className="relative shrink-0 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
+        className="relative shrink-0 overflow-hidden"
         style={{ width: isSidebarCollapsed ? 0 : 240 }}
         aria-hidden={isSidebarCollapsed}
       >
-        <motion.div
+        <div
           className="absolute inset-y-0 left-0 flex w-[240px] min-h-0 flex-col overflow-hidden bg-[#171717]"
-          initial={false}
-          animate={{ x: isSidebarCollapsed ? -240 : 0, opacity: isSidebarCollapsed ? 0 : 1 }}
-          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          style={{ transform: isSidebarCollapsed ? "translateX(-240px)" : "translateX(0)", opacity: isSidebarCollapsed ? 0 : 1 }}
         >
           <div className="flex h-[44px] items-center border-b border-white/[0.06] px-3">
             <button
@@ -113,12 +110,12 @@ export function SettingsScreen({ onBack, settings, onPatchSettings, isSaving, is
               );
             })}
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Right content — Codex #121212 / card #1e1e1e with page curve like external app */}
       <div
-        className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-[#171717] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+        className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-[#171717] ${
           isSidebarCollapsed ? "rounded-t-[16px]" : "rounded-tl-[16px]"
         }`}
       >
@@ -142,7 +139,7 @@ function GeneralTab({ settings, onPatchSettings, isSaving }: { settings: Runtime
       <div className="flex items-center justify-between gap-6">
         <div>
           <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-white">General</h2>
-          {isSaving ? <p className="mt-1 text-[11px] text-white/40">Saving settings…</p> : null}
+          <p className="mt-1 h-4 text-[11px] text-white/40" aria-live="polite">{isSaving ? "Saving settings…" : "\u00a0"}</p>
         </div>
       </div>
 
@@ -165,7 +162,7 @@ function GeneralTab({ settings, onPatchSettings, isSaving }: { settings: Runtime
                       defaultScanMode: preset.defaultMode,
                     });
                   }}
-                  className={`group rounded-xl border px-3.5 py-3.5 text-left transition-all ${
+                  className={`group rounded-xl border px-3.5 py-3.5 text-left transition-colors ${
                     active
                       ? "bg-[#2a241e] border-[#c9a86a]/25 shadow-[0_0_0_1px_rgba(201,168,106,0.12)]"
                       : "bg-[#232323] border-white/[0.06] hover:bg-[#262626] hover:border-white/[0.08]"
@@ -234,7 +231,7 @@ function GeneralTab({ settings, onPatchSettings, isSaving }: { settings: Runtime
                 <button
                   key={option.value}
                   onClick={() => void onPatchSettings({ theme: option.value })}
-                  className={`group flex flex-col items-center gap-2 rounded-xl border px-3 py-3.5 transition-all ${
+                  className={`group flex flex-col items-center gap-2 rounded-xl border px-3 py-3.5 transition-colors ${
                     active
                       ? "bg-[#2a241e] border-[#c9a86a]/25 shadow-[0_0_0_1px_rgba(201,168,106,0.12)]"
                       : "bg-[#232323] border-white/[0.06] hover:bg-[#262626] hover:border-white/[0.08]"
@@ -403,6 +400,7 @@ function ProvidersTab({ settings, onPatchSettings, onBack }: { settings: Runtime
         <p className="mt-1 text-[12.5px] leading-5 text-white/55">
           Choose a ready provider, paste your key, test the connection, then pick a model each with its own folder and isolated integration
         </p>
+        <div className="mt-1 h-4" aria-hidden="true" />
         {settings.aiProvider && (
           <p className="mt-2 text-[12px] text-white/40">
             Active: <span className="text-white/80">{settings.aiProvider}</span> {settings.aiModel && <>· <span className="text-white/80">{settings.aiModel}</span></>} {settings.aiApiKeyMasked && <>· <span className="text-white/40">{settings.aiApiKeyMasked}</span></>}
